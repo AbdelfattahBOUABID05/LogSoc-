@@ -1,0 +1,159 @@
+<div class="flex min-h-screen bg-[#f0f2f5] dark:bg-[#0a192f] transition-colors duration-500">
+  <app-sidebar></app-sidebar>
+
+  <main class="flex-1 ml-64 pt-24 pb-8 px-12 mx-auto h-full">
+    <div class="w-full">
+      <header class="mb-10 animate-fade-in">
+        <div class="flex items-center gap-4">
+          <div class="icon-box-indigo">
+            <i class="fas fa-user-circle text-2xl text-indigo-500"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase italic">
+              Mon <span class="text-indigo-500 not-italic">Profil</span> SOC
+            </h2>
+            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Gestion des informations personnelles & Sécurité</p>
+          </div>
+        </div>
+      </header>
+
+      <div class="space-y-6 animate-slide-up">
+        <!-- Card 1: Informations Personnelles -->
+        <div class="profile-section-card p-10">
+          <div class="flex items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-white/5">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+              <i class="fas fa-id-card text-xs"></i>
+            </div>
+            <h3 class="font-black text-[11px] uppercase tracking-[0.3em] text-slate-900 dark:text-white">Détails du Profil</h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Prénom</label>
+              <div class="relative group/input">
+                <i class="fas fa-user absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <div class="input-soc-floating flex items-center h-[56px] opacity-80 cursor-not-allowed">
+                  {{ firstName || 'Chargement...' }}
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Nom</label>
+              <div class="relative group/input">
+                <i class="fas fa-user absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <div class="input-soc-floating flex items-center h-[56px] opacity-80 cursor-not-allowed">
+                  {{ lastName || 'Chargement...' }}
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Nom d'utilisateur</label>
+              <div class="relative group/input">
+                <i class="fas fa-at absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <div class="input-soc-floating flex items-center h-[56px] opacity-80 cursor-not-allowed">
+                  {{ username }}
+                </div>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Adresse Email</label>
+              <div class="relative group/input">
+                <i class="fas fa-envelope absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <div class="input-soc-floating flex items-center h-[56px] opacity-80 cursor-not-allowed">
+                  {{ email || 'Chargement...' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Badge Expert SOC -->
+        <div class="profile-section-card p-10">
+          <div class="flex items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-white/5">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+              <i class="fas fa-qrcode text-xs"></i>
+            </div>
+            <h3 class="font-black text-[11px] uppercase tracking-[0.3em] text-slate-900 dark:text-white">Signature Numérique</h3>
+          </div>
+
+          <div class="badge-container group">
+            <div class="w-48 h-48 bg-white p-4 rounded-[24px] shadow-2xl flex items-center justify-center transform group-hover:scale-105 transition-transform duration-500 relative">
+              <img *ngIf="qrCodeBase64" [src]="qrCodeBase64" class="w-full h-full object-contain animate-fade-in" alt="Expert QR Code">
+              <div *ngIf="!qrCodeBase64" class="absolute inset-0 flex flex-col items-center justify-center skeleton rounded-[24px]">
+                <i class="fas fa-qrcode text-slate-700/20 text-4xl mb-2"></i>
+                <span class="text-[8px] font-black text-slate-700/40 uppercase tracking-[0.3em]">SOC Badge</span>
+              </div>
+            </div>
+
+            <div class="flex-1 space-y-4">
+              <div>
+                <p class="text-slate-900 dark:text-white font-black uppercase italic tracking-wider text-sm mb-2">Votre Badge d'Authentification</p>
+                <p class="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed font-medium">
+                  Ce QR Code est votre signature numérique d'Expert SOC. Il permet de certifier vos interventions lors des audits critiques et des forensics réseau.
+                </p>
+              </div>
+              <div class="inline-flex items-center gap-3 px-4 py-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                <i class="fas fa-shield-alt text-indigo-500 text-xs"></i>
+                <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Expert Vérifié par le SOC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Sécurité & Mot de Passe -->
+        <div class="profile-section-card p-10">
+          <div class="flex items-center gap-4 pb-6 mb-8 border-b border-slate-200 dark:border-white/5">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+              <i class="fas fa-shield-halved text-xs"></i>
+            </div>
+            <h3 class="font-black text-[11px] uppercase tracking-[0.3em] text-slate-900 dark:text-white">Sécurité</h3>
+          </div>
+
+          <div *ngIf="isFirstLogin()" class="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[24px] flex items-center gap-6 animate-pulse">
+            <div class="w-12 h-12 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500">
+              <i class="fas fa-exclamation-triangle text-xl"></i>
+            </div>
+            <div>
+              <h4 class="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1">Première Connexion Détectée</h4>
+              <p class="text-[11px] text-amber-600 dark:text-amber-200/60 font-medium">Veuillez changer votre mot de passe pour sécuriser votre accès expert.</p>
+            </div>
+          </div>
+
+          <form (ngSubmit)="changePassword()" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Ancien Mot de Passe</label>
+              <div class="relative group/input">
+                <i class="fas fa-lock absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <input type="password" [(ngModel)]="passwords.old" name="old" required
+                       class="input-soc-floating" placeholder="••••••••">
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Nouveau Mot de Passe</label>
+              <div class="relative group/input">
+                <i class="fas fa-key absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <input type="password" [(ngModel)]="passwords.new" name="new" required
+                       class="input-soc-floating" placeholder="••••••••">
+              </div>
+            </div>
+            <div class="space-y-3">
+              <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Confirmer le Nouveau</label>
+              <div class="relative group/input">
+                <i class="fas fa-check-circle absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                <input type="password" [(ngModel)]="passwords.confirm" name="confirm" required
+                       class="input-soc-floating" placeholder="••••••••">
+              </div>
+            </div>
+
+            <div class="md:col-span-3 pt-4">
+              <button type="submit" [disabled]="loadingPass" class="btn-indigo-gradient w-full md:w-auto md:min-w-[300px]">
+                <i class="fas" [class.fa-sync-alt]="!loadingPass" [class.fa-spinner]="loadingPass" [class.fa-spin]="loadingPass"></i>
+                {{ loadingPass ? 'Mise à jour en cours...' : 'Mettre à jour le mot de passe' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

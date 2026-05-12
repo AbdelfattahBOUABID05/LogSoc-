@@ -1,0 +1,85 @@
+/* Terminal Section Styling */
+.terminal-container {
+  @apply col-span-9 flex flex-col glass-card overflow-hidden relative;
+  background: var(--terminal-bg);
+  border-color: var(--card-border);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+}
+
+.terminal-header {
+  @apply px-6 py-4 border-b flex items-center justify-between;
+  background: var(--terminal-header);
+  border-color: var(--card-border);
+}
+
+.terminal-body {
+  @apply flex-1 p-8 font-mono text-sm overflow-y-auto relative;
+  background: transparent;
+  max-height: 600px;
+}
+
+.terminal-line {
+  @apply mb-6 animate-fade-in;
+}
+
+.terminal-prompt {
+  color: var(--terminal-prompt);
+  @apply font-black text-xs;
+}
+
+.terminal-output {
+  color: var(--terminal-text);
+  @apply mt-2 whitespace-pre-wrap leading-relaxed opacity-90;
+}
+
+.terminal-input-row {
+  @apply flex items-center gap-3 mt-4;
+}
+
+.terminal-input {
+  @apply flex-1 bg-transparent border-none outline-none font-mono text-sm;
+  color: var(--terminal-text);
+}
+
+/* Custom scrollbar for terminal */
+.terminal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-body::-webkit-scrollbar-thumb {
+  background: var(--terminal-prompt);
+  @apply opacity-20 rounded-full hover:opacity-40 transition-all;
+}
+
+/* Glass card enhancement */
+.glass-card {
+  @apply bg-white/80 dark:bg-[#001f3f]/40 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-3xl shadow-xl transition-all duration-500;
+}
+
+/* Scrollbar Removal */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow: hidden !important;
+}
+
+main, aside {
+  overflow: hidden !important;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}

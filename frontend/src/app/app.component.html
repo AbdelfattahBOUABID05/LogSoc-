@@ -1,0 +1,17 @@
+<div class="app-container" [@brandedTransition]="prepareRoute(outlet)">
+  <div class="main-layout" [class.with-sidebar]="shouldShowSidebar()">
+    <router-outlet #outlet="outlet"></router-outlet>
+  </div>
+  
+  <!-- Branded Page Transition Overlay -->
+  <div class="brand-overlay fixed inset-0 z-[999] bg-[#0a192f] flex flex-col items-center justify-center pointer-events-none"
+       [class.active]="isNavigating"
+       [class.sidebar-offset]="shouldShowSidebar()">
+    <div class="logo-container">
+      <img src="assets/img/logo-awb.png" class="w-80 h-auto branded-logo dark:invert" priority>
+      <div class="loader-line"></div>
+    </div>
+    <p class="text-indigo-400/50 text-[10px] font-black uppercase tracking-[0.5em] mt-8 animate-pulse">Initialisation SOC...</p>
+  </div>
+</div>
+

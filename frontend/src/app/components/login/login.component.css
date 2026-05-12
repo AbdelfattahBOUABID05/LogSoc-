@@ -1,0 +1,134 @@
+.login-container {
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.5s ease;
+}
+
+/* Glassmorphism Card */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-card:hover {
+  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.6), 0 0 30px var(--shadow-glow);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  @apply w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(8px);
+}
+
+.theme-toggle-btn:hover {
+  @apply scale-110 shadow-lg;
+  border-color: var(--neon-indigo);
+}
+
+/* Form Styling */
+.input-label {
+  @apply text-[10px] font-black uppercase tracking-widest block mb-2;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.input-wrapper {
+  @apply relative flex items-center transition-all duration-300;
+}
+
+.soc-input {
+  @apply w-full border rounded-xl px-12 py-4 text-sm transition-all duration-300;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--card-border);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.soc-input:focus {
+  @apply outline-none bg-white/5 border-indigo-500/50 ring-4 ring-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.2)];
+}
+
+.input-icon {
+  @apply absolute left-4 text-slate-500 transition-colors duration-300;
+}
+
+.input-wrapper:focus-within .input-icon {
+  @apply text-indigo-500;
+}
+
+.password-toggle {
+  @apply absolute right-4 text-slate-500 hover:text-indigo-500 transition-colors;
+}
+
+/* Submit Button */
+.submit-btn {
+  @apply w-full py-4 rounded-xl font-black text-xs tracking-[0.2em] transition-all duration-300 flex items-center justify-center;
+  background: var(--neon-indigo);
+  color: white;
+  box-shadow: 0 10px 20px -5px rgba(99,102,241,0.4);
+}
+
+.submit-btn:hover:not(:disabled) {
+  @apply scale-[1.02] shadow-[0_15px_30px_-5px_rgba(99,102,241,0.6)];
+  background: #4f46e5;
+}
+
+.submit-btn:disabled {
+  @apply opacity-50 cursor-not-allowed grayscale;
+}
+
+/* Theme Awareness for Logos */
+.theme-aware-logo {
+  transition: all 0.5s ease;
+}
+
+:host-context(.dark) .theme-aware-logo {
+  filter: brightness(1.2) drop-shadow(0 0 15px rgba(255, 255, 255, 0.15));
+}
+
+:host-context(.light) .theme-aware-logo {
+  filter: brightness(1) contrast(1.1);
+}
+
+/* Decorative Glows */
+.bg-glow-1 {
+  @apply absolute -top-24 -left-24 w-[500px] h-[500px] rounded-full opacity-20 blur-[150px];
+  background: var(--neon-indigo);
+  z-index: 1;
+}
+
+.bg-glow-2 {
+  @apply absolute -bottom-24 -right-24 w-[500px] h-[500px] rounded-full opacity-10 blur-[150px];
+  background: var(--neon-purple);
+  z-index: 1;
+}
+
+/* Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 640px) {
+  .login-card {
+    @apply border-none rounded-none;
+    background: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+}

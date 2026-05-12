@@ -1,0 +1,442 @@
+/* Futuristic SOC Theme Core */
+:host {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  
+  --neon-blue: #3b82f6;
+  --neon-indigo: #6366f1;
+  --neon-purple: #8b5cf6;
+  --neon-green: #10b981;
+  --neon-red: #ef4444;
+}
+
+.soc-container {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--neon-indigo);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.1), 0 0 20px var(--shadow-glow);
+  transform: translateY(-4px);
+}
+
+/* Header Styles */
+.header-icon-box {
+  @apply w-12 h-12 rounded-2xl flex items-center justify-center border transition-all;
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.header-icon-box mat-icon {
+  color: var(--neon-indigo);
+}
+
+.header-title {
+  @apply text-3xl font-black tracking-tighter;
+  color: var(--text-main);
+}
+
+.header-title .highlight {
+  color: var(--neon-indigo);
+}
+
+.header-subtitle-row {
+  @apply flex items-center gap-4 ml-16;
+}
+
+.subtitle {
+  @apply text-[10px] font-bold tracking-[0.3em] uppercase;
+  color: var(--text-muted);
+}
+
+.status-badge {
+  @apply px-3 py-1 rounded-full text-[9px] font-black tracking-widest border;
+}
+
+.pulse-safe {
+  background: var(--neon-green);
+  color: white;
+  opacity: 0.8;
+  border-color: transparent;
+  animation: pulse-glow-green 2s infinite;
+}
+
+/* Gauges */
+.gauge-card {
+  @apply flex flex-col items-center justify-center p-6;
+}
+
+.gauge-wrapper {
+  @apply w-full h-40 mt-2 flex items-center justify-center;
+}
+
+.card-header {
+  @apply w-full flex justify-between items-center mb-2;
+}
+
+.card-title {
+  @apply text-[10px] font-black tracking-widest;
+  color: var(--text-muted);
+}
+
+/* Fix Gauge Overlay Text */
+.gauge-value-overlay {
+  @apply absolute flex items-center justify-center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.gauge-value-overlay span {
+  @apply text-2xl font-black font-mono;
+  color: var(--text-main);
+  text-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+:host-context(.dark-mode) .gauge-value-overlay span {
+  color: #ffffff;
+}
+
+:host-context(.light-mode) .gauge-value-overlay span {
+  color: #1e293b;
+}
+
+/* Map Section */
+.map-card {
+  @apply relative overflow-hidden;
+}
+
+.map-stage {
+  @apply relative w-full h-[350px] rounded-2xl border flex items-center justify-center;
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.world-map-svg {
+  @apply w-full h-full object-contain opacity-20 grayscale transition-all;
+}
+
+:host-context(.light-mode) .world-map-svg {
+  @apply invert-0 opacity-10;
+}
+
+.map-overlay-svg {
+  @apply absolute inset-0 w-full h-full pointer-events-none;
+}
+
+.attack-path {
+  fill: none;
+  stroke: var(--neon-red);
+  stroke-width: 1.5;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw-attack 4s linear infinite;
+  filter: drop-shadow(0 0 4px var(--neon-red));
+}
+
+.attack-path.delay-1 { animation-delay: 1.5s; }
+.attack-path.delay-2 { animation-delay: 3s; }
+
+@keyframes draw-attack {
+  0% { stroke-dashoffset: 1000; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+.threat-node {
+  @apply absolute w-2 h-2 rounded-full bg-red-500 shadow-[0_0_15px_#ef4444];
+  animation: pulse-node 2s infinite;
+}
+
+.node-1 { top: 30%; left: 20%; }
+.node-2 { top: 20%; left: 80%; }
+.node-3 { top: 70%; left: 35%; }
+.node-center { top: 50%; left: 65%; @apply w-3 h-3 bg-indigo-500 shadow-[0_0_20px_#6366f1]; }
+
+@keyframes pulse-node {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Activity Chart Custom Filter Positioning */
+.chart-header-row {
+  @apply flex justify-between items-center mb-6 w-full;
+}
+
+.chart-header-left {
+  @apply flex items-center gap-3;
+}
+
+.chart-header-right {
+  @apply flex items-center gap-4;
+}
+
+/* Terminal Styles */
+.terminal-card {
+  @apply xl:col-span-2 glass-card overflow-hidden flex flex-col;
+  background: var(--terminal-bg);
+  border-color: var(--card-border);
+}
+
+.terminal-header {
+  @apply px-6 py-4 border-b flex items-center justify-between;
+  background: var(--terminal-header);
+  border-color: var(--card-border);
+}
+
+.terminal-title {
+  @apply text-[10px] font-bold text-slate-400 tracking-widest uppercase;
+}
+
+.header-dots {
+  @apply flex gap-1.5;
+}
+
+.header-dots .dot {
+  @apply w-2.5 h-2.5 rounded-full;
+}
+
+.dot.red { @apply bg-red-500/80; }
+.dot.yellow { @apply bg-amber-500/80; }
+.dot.green { @apply bg-emerald-500/80; }
+
+.terminal-body {
+  @apply flex-1 p-6 font-mono text-[11px] leading-relaxed overflow-y-auto max-h-[300px] custom-scrollbar-terminal;
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent);
+}
+
+.user-prompt {
+  color: var(--terminal-prompt);
+  @apply mr-2 font-bold;
+}
+
+.command-text {
+  color: var(--terminal-text);
+  @apply opacity-90;
+}
+
+.blinking-cursor {
+  @apply inline-block w-2 h-4 ml-1 align-middle;
+  background-color: var(--terminal-text);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  from, to { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Custom Scrollbars */
+.custom-scrollbar-terminal::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar-terminal::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+.custom-scrollbar-terminal::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20;
+}
+
+/* Insights Column */
+.insights-stack {
+  @apply space-y-6;
+}
+
+.insight-item {
+  @apply p-4 rounded-2xl border;
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+
+.insight-item.highlight {
+  border-color: var(--neon-indigo);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.insight-label {
+  @apply text-[9px] font-black tracking-widest uppercase block mb-2;
+  color: var(--text-muted);
+}
+
+.status-indicator-row {
+  @apply flex items-center gap-3;
+}
+
+.status-dot {
+  @apply w-2.5 h-2.5 rounded-full;
+}
+
+.status-dot.green { @apply bg-emerald-500 shadow-[0_0_12px_#10b981]; }
+.status-dot.red { @apply bg-red-500 shadow-[0_0_12px_#ef4444] animate-pulse; }
+
+.status-text {
+  @apply text-xs font-black tracking-tight;
+  color: var(--text-main);
+}
+
+.insight-msg {
+  @apply text-[11px] leading-relaxed font-medium;
+  color: var(--text-muted);
+}
+
+.score-bar-container {
+  @apply relative h-6 rounded-full mt-2 overflow-hidden flex items-center px-4;
+  background: var(--card-bg);
+}
+
+.score-bar-fill {
+  @apply absolute left-0 top-0 h-full opacity-40;
+  background: linear-gradient(to right, var(--neon-indigo), var(--neon-blue));
+}
+
+.score-value {
+  @apply relative z-10 text-[10px] font-black;
+  color: var(--text-main);
+}
+
+/* Filters & Toggles */
+.soc-toggle-group {
+  @apply border-none bg-transparent !important;
+}
+
+::ng-deep .soc-toggle-group .mat-button-toggle {
+  @apply bg-transparent border-none !important;
+}
+
+::ng-deep .soc-toggle-group .mat-button-toggle-label-content {
+  @apply px-4 py-2 text-[10px] font-black tracking-widest transition-all duration-300 !important;
+  color: var(--text-muted) !important;
+}
+
+::ng-deep .soc-toggle-group .mat-button-toggle-checked {
+  @apply rounded-xl !important;
+  background: var(--neon-indigo) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px var(--shadow-glow);
+}
+
+::ng-deep .soc-toggle-group .mat-button-toggle-checked .mat-button-toggle-label-content {
+  @apply text-white !important;
+}
+
+/* Global Loader */
+.soc-loader-overlay {
+  @apply fixed inset-0 z-[100] backdrop-blur-xl flex items-center justify-center;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.loader-content {
+  @apply flex flex-col items-center gap-6;
+}
+
+.loader-ring {
+  @apply w-20 h-20 border-2 border-t-indigo-500 rounded-full animate-spin;
+  border-color: var(--card-border);
+}
+
+.loader-text {
+  @apply text-xs font-black text-indigo-500 tracking-[0.4em] animate-pulse;
+}
+
+/* Empty State Styles */
+.empty-dashboard-container {
+  @apply flex flex-col items-center justify-center text-center p-20 glass-card;
+  min-height: 400px;
+}
+
+.empty-icon-box {
+  @apply w-24 h-24 rounded-full flex items-center justify-center mb-6;
+  background: var(--card-bg);
+  border: 2px dashed var(--card-border);
+}
+
+.empty-icon-box mat-icon {
+  @apply text-5xl;
+  color: var(--text-dim);
+}
+
+.empty-title {
+  @apply text-2xl font-black mb-4;
+  color: var(--text-main);
+}
+
+.empty-desc {
+  @apply text-sm max-w-md mb-8;
+  color: var(--text-muted);
+}
+
+.action-btn {
+  @apply px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase transition-all flex items-center gap-3;
+  background: var(--neon-indigo);
+  color: white;
+}
+
+.action-btn:hover {
+  @apply scale-105 shadow-xl;
+  box-shadow: 0 10px 20px var(--shadow-glow);
+}
+
+/* Helper Classes */
+.icon-indigo { color: var(--neon-indigo); }
+.icon-red { color: var(--neon-red); }
+.icon-green { color: var(--neon-green); }
+
+@keyframes pulse-glow-green {
+  0% { box-shadow: 0 0 5px rgba(16,185,129,0.2); }
+  50% { box-shadow: 0 0 20px rgba(16,185,129,0.4); }
+  100% { box-shadow: 0 0 5px rgba(16,185,129,0.2); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.ml-13 {
+  margin-left: 3.25rem;
+}
+
+/* Tactical Flow Visualization */
+.flow-visualization {
+  @apply h-16 w-full flex items-end gap-1 px-2;
+  background: linear-gradient(to top, rgba(99, 102, 241, 0.05), transparent);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.flow-wave {
+  @apply flex-1 bg-indigo-500/30 rounded-t-sm;
+  min-height: 4px;
+  animation: wave-pulse 2s ease-in-out infinite;
+}
+
+@keyframes wave-pulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 0.8; transform: scaleY(1.2); }
+}
+
+.scanning-dot {
+  @apply w-2 h-2 rounded-full bg-emerald-500;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 1024px) {
+  .ml-13 {
+    margin-left: 0;
+  }
+}

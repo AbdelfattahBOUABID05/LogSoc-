@@ -1,0 +1,9 @@
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+  <path d="M150,150 L180,140 L200,160 L220,150 L250,180 L230,220 L200,230 L170,210 Z" fill="currentColor" opacity="0.5"/>
+  <path d="M400,100 L450,90 L480,120 L470,160 L430,180 L400,150 Z" fill="currentColor" opacity="0.5"/>
+  <path d="M700,200 L750,180 L800,220 L780,280 L720,300 L680,250 Z" fill="currentColor" opacity="0.5"/>
+  <path d="M300,300 L350,280 L400,320 L380,380 L320,400 L280,350 Z" fill="currentColor" opacity="0.5"/>
+  <circle cx="500" cy="250" r="2" fill="currentColor" opacity="0.2"/>
+  <circle cx="200" cy="150" r="2" fill="currentColor" opacity="0.2"/>
+  <circle cx="800" cy="100" r="2" fill="currentColor" opacity="0.2"/>
+</svg>

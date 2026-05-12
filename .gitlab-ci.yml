@@ -1,0 +1,82 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+  # Images Registry Paths
+  FRONTEND_IMAGE: $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_REF_SLUG
+  BACKEND_IMAGE: $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_REF_SLUG
+  # Caching Paths
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+
+services:
+  - docker:24.0.5-dind
+
+# --- Build Stage ---
+# Construction et Push des images vers la GitLab Registry
+build_images:
+  stage: build
+  image: docker:24.0.5
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    # Build Backend
+    - docker build --pull -t $BACKEND_IMAGE ./backend
+    - docker push $BACKEND_IMAGE
+    # Build Frontend
+    - docker build --pull -t $FRONTEND_IMAGE ./frontend
+    - docker push $FRONTEND_IMAGE
+
+# --- Test Stage ---
+# Tests Unitaires Python (Backend)
+test_backend:
+  stage: test
+  image: python:3.11-slim
+  cache:
+    key: backend-cache
+    paths:
+      - .cache/pip
+  script:
+    - cd backend
+    - pip install --cache-dir $PIP_CACHE_DIR -r requirements.txt
+    - pytest
+
+# Tests Unitaires Angular (Frontend)
+test_frontend:
+  stage: test
+  image: node:18-alpine
+  cache:
+    key: frontend-cache
+    paths:
+      - frontend/.npm
+      - frontend/node_modules
+  script:
+    - cd frontend
+    - npm ci --cache .npm --prefer-offline
+    - npm test -- --watch=false --browsers=ChromeHeadless
+
+# --- Deploy Stage ---
+# Déploiement automatique via SSH
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST "
+        cd /opt/logsoc &&
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY &&
+        docker-compose pull &&
+        docker-compose up -d --remove-orphans
+      "
+  only:
+    - main
+  environment:
+    name: production
+    url: http://$DEPLOY_HOST

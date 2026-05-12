@@ -1,0 +1,445 @@
+<div class="soc-container min-h-screen">
+  <!-- Sidebar -->
+  <app-sidebar class="hidden lg:block w-72 h-screen fixed left-0 top-0 z-50"></app-sidebar>
+
+  <!-- Main Content -->
+  <main class="lg:ml-72 p-6 lg:p-10 space-y-8">
+    
+    <!-- Top Header Section -->
+    <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+      <div class="header-content">
+        <div class="flex items-center gap-4 mb-2">
+          <div class="header-icon-box">
+            <img src="assets/img/logo.png" class="w-8 h-8 object-contain dark:invert" alt="SOC Logo" priority>
+          </div>
+          <h1 class="header-title">CENTRE DE COMMANDE <span class="highlight">SOC-ANALYZER</span></h1>
+        </div>
+        <div class="header-subtitle-row">
+          <span class="status-badge pulse-safe">SYSTÈME ACTIF</span>
+          <p class="subtitle">INTELLIGENCE LOGANALYZER • MOTEUR D'ANALYSE</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Bouton Export PDF -->
+        <button (click)="exportDashboardToPDF()" 
+                [disabled]="isExporting()"
+                class="glass-stat-card hover:bg-indigo-500/10 transition-all group" 
+                matTooltip="Exporter le rapport d'analyse en PDF">
+          <div class="stat-icon-box" [class.animate-spin]="isExporting()">
+            <mat-icon class="text-indigo-500">{{ isExporting() ? 'sync' : 'description' }}</mat-icon>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label uppercase">Exportation</span>
+            <span class="stat-value text-xs">{{ isExporting() ? 'Génération...' : 'Exporter PDF' }}</span>
+          </div>
+        </button>
+
+        <!-- Alerte d'anomalie (Uniquement si détectée) -->
+        <div *ngIf="isAnomalyDetected()" class="anomaly-alert animate-shake">
+          <mat-icon>warning</mat-icon>
+          <div class="alert-text">
+            <span class="alert-label">MENACE DÉTECTÉE</span>
+            <span class="alert-msg">{{ anomalyMessage() }}</span>
+          </div>
+        </div>
+
+        <!-- Statistiques Globales -->
+        <div class="glass-stat-card">
+          <div class="stat-icon-box blue">
+            <mat-icon>analytics</mat-icon>
+          </div>
+          <div class="stat-data">
+            <span class="stat-label">LOGS TRAITÉS</span>
+            <span class="stat-value">{{ totalLogsCount() | number }}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- État Vide -->
+    <div *ngIf="totalLogsCount() === 0 && !isLoading()" class="empty-dashboard-container">
+      <div class="empty-icon-box">
+        <mat-icon>database_off</mat-icon>
+      </div>
+      <h2 class="empty-title">Aucune Analyse Trouvée</h2>
+      <p class="empty-desc">Votre base de données de sécurité est actuellement vide. Commencez par effectuer une analyse locale ou distante (SSH) pour alimenter votre tableau de bord SOC.</p>
+      <button (click)="navigateToAnalysis()" class="action-btn">
+        <mat-icon>rocket_launch</mat-icon>
+        Lancer une Analyse
+      </button>
+    </div>
+
+    <!-- Contenu du Dashboard (Masqué si vide) -->
+    <ng-container *ngIf="totalLogsCount() > 0 || isLoading()">
+      <!-- Première ligne: Indicateurs & Carte -->
+      <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        
+        <!-- Colonne des Indicateurs -->
+        <div class="xl:col-span-1 space-y-6">
+          <!-- Performance Serveur -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <h3 class="card-title">PERFORMANCE SERVEUR</h3>
+              <mat-icon class="icon-indigo">speed</mat-icon>
+            </div>
+            <div class="gauge-wrapper relative">
+              <apx-chart
+                [series]="healthGaugeOptions.series!"
+                [chart]="healthGaugeOptions.chart!"
+                [plotOptions]="healthGaugeOptions.plotOptions!"
+                [colors]="healthGaugeOptions.colors!"
+                [stroke]="healthGaugeOptions.stroke!"
+              ></apx-chart>
+              <div class="gauge-value-overlay">
+                <span>{{ systemHealth() }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charge de l'Analyse -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <h3 class="card-title">CHARGE DE L'ANALYSE</h3>
+              <mat-icon class="icon-red">analytics</mat-icon>
+            </div>
+            <div class="gauge-wrapper relative">
+              <apx-chart
+                [series]="threatGaugeOptions.series!"
+                [chart]="threatGaugeOptions.chart!"
+                [plotOptions]="threatGaugeOptions.plotOptions!"
+                [colors]="threatGaugeOptions.colors!"
+                [stroke]="threatGaugeOptions.stroke!"
+              ></apx-chart>
+              <div class="gauge-value-overlay">
+                <span>{{ threatLevel() | number:'1.0-0' }}%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Taux de Réussite -->
+          <div class="glass-card gauge-card">
+            <div class="card-header">
+              <h3 class="card-title">TAUX DE RÉUSSITE</h3>
+              <mat-icon class="icon-green">verified</mat-icon>
+            </div>
+            <div class="gauge-wrapper relative">
+              <apx-chart
+                [series]="successGaugeOptions.series!"
+                [chart]="successGaugeOptions.chart!"
+                [plotOptions]="successGaugeOptions.plotOptions!"
+                [colors]="successGaugeOptions.colors!"
+                [stroke]="successGaugeOptions.stroke!"
+              ></apx-chart>
+              <div class="gauge-value-overlay">
+                <span>{{ taskSuccessRate() }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne du Graphique Unifié (Full Width) -->
+        <div class="xl:col-span-3 space-y-8">
+          
+          <!-- Graphique d'Activité Principal Multi-Séries -->
+          <div id="activity-chart" class="glass-card p-8">
+            <div class="flex justify-between items-center mb-8">
+              <div class="flex items-center gap-3">
+                <div class="header-dot indigo"></div>
+                <h3 class="card-title uppercase">ACTIVITÉ DE SÉCURITÉ TEMPORELLE</h3>
+              </div>
+              
+              <!-- Filtre Temporel Global -->
+              <div class="glass-filter-box">
+                <mat-button-toggle-group [value]="currentTimeFilter()" (change)="setFilter($event.value)" class="soc-toggle-group">
+                  <mat-button-toggle value="H">H</mat-button-toggle>
+                  <mat-button-toggle value="D">J</mat-button-toggle>
+                  <mat-button-toggle value="M">M</mat-button-toggle>
+                  <mat-button-toggle value="Y">A</mat-button-toggle>
+                </mat-button-toggle-group>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <apx-chart
+                *ngIf="mainChartOptions"
+                [series]="mainChartOptions.series"
+                [chart]="mainChartOptions.chart"
+                [xaxis]="mainChartOptions.xaxis"
+                [stroke]="mainChartOptions.stroke"
+                [colors]="mainChartOptions.colors"
+                [fill]="mainChartOptions.fill"
+                [grid]="mainChartOptions.grid"
+                [tooltip]="mainChartOptions.tooltip"
+                [dataLabels]="mainChartOptions.dataLabels"
+                [legend]="mainChartOptions.legend"
+              ></apx-chart>
+            </div>
+          </div>
+
+          <!-- Section Historique ou Terminal (Existant) -->
+          <div class="glass-card p-8 relative overflow-hidden group">
+            <div class="flex justify-between items-center mb-6">
+              <div class="flex items-center gap-3">
+                <div class="header-dot blue"></div>
+                <h3 class="card-title uppercase">CONTRÔLE TACTIQUE DU FLUX</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="scanning-dot"></span>
+                <span class="text-[9px] font-black text-emerald-500 tracking-widest uppercase animate-pulse">Scanning...</span>
+              </div>
+            </div>
+
+            <!-- Mini-Area Chart Simulation for Flow -->
+            <div class="flow-visualization">
+              <div class="flow-wave" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]" [style.height.%]="getRandomHeight()" [style.animation-delay.s]="i * 0.1"></div>
+            </div>
+            
+            <div class="flex justify-between items-end mt-4">
+              <div class="flex flex-col">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Débit Entrant</span>
+                <span class="text-xl font-black text-indigo-500 font-mono">{{ totalLogsCount() > 0 ? (totalLogsCount() / 60 | number:'1.1-1') : '0.0' }} <small class="text-[10px] opacity-50">L/S</small></span>
+              </div>
+              <div class="text-right">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Latence SOC</span>
+                <span class="text-xl font-black text-slate-400 font-mono">14<small class="text-[10px] opacity-50">MS</small></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Solution Suggestion Alert -->
+      <div *ngIf="matchedSolution()" class="glass-card border-l-4 border-emerald-500 p-6 animate-fade-in mb-8">
+        <div class="flex items-start gap-4">
+          <div class="p-3 bg-emerald-500/10 rounded-2xl">
+            <mat-icon class="text-emerald-500">lightbulb</mat-icon>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <h4 class="text-xs font-black text-emerald-500 uppercase tracking-widest">Solution Suggérée par {{ matchedSolution()?.author_name }}</h4>
+              <span class="text-[8px] font-bold px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/20 uppercase tracking-tighter">Global Match</span>
+            </div>
+            <p class="text-sm font-bold text-slate-900 dark:text-white mb-2">{{ matchedSolution()?.problem_title }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-2">{{ matchedSolution()?.solution_content }}</p>
+            <a [routerLink]="['/knowledge-base']" [queryParams]="{ highlight: matchedSolution()?.id }" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all">
+              <mat-icon class="text-xs">library_books</mat-icon>
+              Voir la solution de {{ (matchedSolution()?.author_name || 'Expert').split(' ')[0] }}
+            </a>
+          </div>
+          <button (click)="matchedSolution.set(null)" class="text-slate-400 hover:text-slate-600 transition-colors">
+            <mat-icon class="text-sm">close</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dernière ligne: Terminal & Insights -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        
+        <!-- Widget Terminal en Direct -->
+        <div class="xl:col-span-2 glass-card terminal-card group">
+          <div class="terminal-header">
+            <div class="header-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">CONSOLE_LOGANALYZER_SOC - root&#64;analyzer-engine</span>
+            <mat-icon class="terminal-action-icon">settings_input_component</mat-icon>
+          </div>
+          <div class="terminal-body custom-scrollbar-terminal">
+            <div *ngFor="let log of liveLogs()" class="terminal-line">
+              <span class="user-prompt">root&#64;analyzer:~$</span>
+              <span class="command-text">{{ log }}</span>
+            </div>
+            <div class="terminal-line active">
+              <span class="user-prompt">root&#64;analyzer:~$</span>
+              <span class="blinking-cursor"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carte d'Analyses IA -->
+        <div class="xl:col-span-1 glass-card p-8">
+          <div class="flex items-center gap-3 mb-8">
+            <mat-icon class="icon-indigo">psychology</mat-icon>
+            <h3 class="card-title uppercase">Moteur IA LogAnalyzer</h3>
+          </div>
+          
+          <div class="insights-stack">
+            <div class="insight-item">
+              <span class="insight-label">ÉTAT DU SYSTÈME</span>
+              <div class="status-indicator-row">
+                <div [class]="isAnomalyDetected() ? 'status-dot red' : 'status-dot green'"></div>
+                <span class="status-text">{{ isAnomalyDetected() ? 'ANOMALIE DÉTECTÉE' : 'OPÉRATIONNEL' }}</span>
+              </div>
+            </div>
+
+            <div class="insight-item highlight">
+              <span class="insight-label">PRÉCONISATION IA</span>
+              <p class="insight-msg">
+                {{ isAnomalyDetected() ? 'ALERTE : Trafic suspect détecté. Veuillez inspecter les journaux SSH et restreindre les accès non autorisés immédiatement.' : 'Analyse terminée. Aucune menace critique identifiée. La posture de sécurité est optimale.' }}
+              </p>
+            </div>
+
+            <div class="insight-item">
+              <span class="insight-label">INDICE D'OBSERVABILITÉ</span>
+              <div class="score-bar-container">
+                <div class="score-bar-fill" [style.width.%]="systemHealth() > 0 ? systemHealth() : 100"></div>
+                <span class="score-value">{{ systemHealth() > 0 ? systemHealth() : 100 }}/100</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Statistiques des Contributeurs & Dernières Activités KB -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+      <!-- Pie Chart: Contributions (1/3) -->
+      <div class="glass-card p-8 lg:col-span-1">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <mat-icon class="text-indigo-500">pie_chart</mat-icon>
+            <h3 class="card-title uppercase">Statistiques des Contributeurs</h3>
+          </div>
+        </div>
+        <div class="kb-pie-container">
+          <apx-chart
+            *ngIf="kbPieChartOptions.series.length > 0"
+            [series]="kbPieChartOptions.series"
+            [chart]="kbPieChartOptions.chart"
+            [labels]="kbPieChartOptions.labels"
+            [colors]="kbPieChartOptions.colors"
+            [plotOptions]="kbPieChartOptions.plotOptions"
+            [legend]="kbPieChartOptions.legend"
+            [tooltip]="kbPieChartOptions.tooltip"
+            [stroke]="kbPieChartOptions.stroke"
+            [dataLabels]="kbPieChartOptions.dataLabels"
+          ></apx-chart>
+          <div *ngIf="kbPieChartOptions.series.length === 0" class="h-[280px] flex flex-col items-center justify-center text-slate-400 gap-3">
+            <mat-icon class="text-4xl opacity-20">analytics</mat-icon>
+            <p class="text-[10px] font-black uppercase tracking-widest">Aucune donnée KB</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau récapitulatif KB (2/3) -->
+      <div class="glass-card p-8 lg:col-span-2">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <mat-icon class="text-emerald-500">history_edu</mat-icon>
+            <h3 class="card-title uppercase">Dernières Activités Base de Connaissances</h3>
+          </div>
+          <a routerLink="/knowledge-base" class="text-[9px] font-black text-indigo-500 uppercase tracking-widest hover:underline">Voir tout</a>
+        </div>
+        
+        <div class="overflow-hidden rounded-2xl border border-slate-100 dark:border-white/5">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50/50 dark:bg-white/5">
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Titre du Problème</th>
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Auteur</th>
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Date</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+              <tr *ngFor="let sol of latestKBSolutions()" class="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                <td class="px-6 py-4">
+                  <span class="text-xs font-bold text-slate-900 dark:text-white">{{ sol.problem_title }}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500 text-[8px] font-black">
+                      {{ (sol.author_name || 'A')[0] }}
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">{{ sol.author_name || 'Admin' }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-[9px] font-bold text-slate-400 uppercase">
+                  {{ sol.created_at | date:'dd/MM/yy' }}
+                </td>
+              </tr>
+              <tr *ngIf="latestKBSolutions().length === 0">
+                <td colspan="3" class="px-6 py-10 text-center text-[10px] text-slate-400 italic">
+                  Aucune activité récente dans la KB.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Historique des Activités (Audit Logs) -->
+    <div *ngIf="authService.isAdmin()" class="grid grid-cols-1 gap-8 mt-8">
+      <div class="glass-card p-8">
+        <div class="flex items-center justify-between mb-8">
+          <div class="flex items-center gap-3">
+            <mat-icon class="text-indigo-500">policy</mat-icon>
+            <h3 class="card-title uppercase">Historique des Activités (Audit Logs)</h3>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-full text-[9px] font-black tracking-widest uppercase border border-indigo-500/20">ADMIN ONLY</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-2xl border border-slate-100 dark:border-white/5">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50/50 dark:bg-white/5">
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Utilisateur</th>
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Action</th>
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">Détails</th>
+                <th class="px-6 py-4 text-[9px] font-black text-slate-500 uppercase tracking-widest text-right">Date & Heure</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+              <tr *ngFor="let log of auditLogs()" class="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                      <mat-icon class="text-slate-400 text-sm">person</mat-icon>
+                    </div>
+                    <span class="text-xs font-black text-slate-900 dark:text-white">{{ log.username }}</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <mat-icon class="text-xs" [class.text-indigo-500]="log.action === 'SSH_COMMAND'" [class.text-emerald-500]="log.action === 'PDF_EXPORT'">
+                      {{ log.action === 'SSH_COMMAND' ? 'terminal' : (log.action === 'PDF_EXPORT' ? 'picture_as_pdf' : 'settings') }}
+                    </mat-icon>
+                    <span class="text-[10px] font-black uppercase tracking-widest" [class.text-indigo-500]="log.action === 'SSH_COMMAND'" [class.text-emerald-500]="log.action === 'PDF_EXPORT'">
+                      {{ log.action }}
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-1 max-w-md">{{ log.details }}</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-[9px] font-bold text-slate-400 uppercase tabular-nums">
+                    {{ log.timestamp | date:'dd/MM/yyyy HH:mm' }}
+                  </span>
+                </td>
+              </tr>
+              <tr *ngIf="auditLogs().length === 0">
+                <td colspan="4" class="px-6 py-10 text-center text-[10px] text-slate-400 italic uppercase tracking-widest">
+                  Aucun log d'audit détecté.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- État de Chargement Global -->
+    <div *ngIf="isLoading()" class="soc-loader-overlay">
+      <div class="loader-content">
+        <div class="loader-ring"></div>
+        <p class="loader-text">SYNCHRONISATION DES FLUX SOC EN COURS...</p>
+      </div>
+    </div>
+  </main>
+</div>

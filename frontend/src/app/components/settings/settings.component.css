@@ -1,0 +1,108 @@
+/* SOC Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(115, 103, 240, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(115, 103, 240, 0.4);
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Main Wrapper Card (Jobs SOC Style) */
+.jobs-wrapper-card {
+  @apply bg-white dark:bg-[#1e2235]/60 backdrop-blur-[15px] border border-black/[0.05] dark:border-white/10 rounded-[24px] shadow-xl transition-all duration-500;
+}
+
+/* Icon Box (Jobs Style) */
+.icon-box-indigo {
+  @apply p-3 bg-indigo-600/10 dark:bg-indigo-600/20 rounded-2xl border border-indigo-500/20 shadow-xl shadow-indigo-500/10;
+}
+
+/* Primary Button (Jobs Style) */
+.btn-indigo-gradient {
+  background: linear-gradient(90deg, #7367f0, #9e95f5);
+  @apply text-white px-8 py-4 rounded-2xl transition-all duration-300 shadow-[0_10px_20px_rgba(115,103,240,0.3)] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 border-none;
+}
+
+.btn-indigo-gradient:hover:not(:disabled) {
+  @apply shadow-[0_15px_25px_rgba(115,103,240,0.4)] scale-[1.02];
+  background: linear-gradient(90deg, #8278f2, #ada5f7);
+}
+
+.btn-indigo-gradient:disabled {
+  @apply opacity-50 cursor-not-allowed shadow-none;
+}
+
+/* Form Inputs (Floating Feel) */
+.input-soc-floating {
+  @apply w-full pl-12 pr-5 py-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-white/10;
+}
+
+/* Custom Neon Toggle */
+.neon-toggle-container {
+  @apply flex items-center gap-4 p-5 bg-indigo-500/5 dark:bg-[#00f2ff]/5 border border-indigo-500/10 dark:border-[#00f2ff]/10 rounded-[20px] transition-all;
+}
+
+.neon-toggle-container:hover {
+  @apply border-indigo-500/30 dark:border-[#00f2ff]/30;
+}
+
+.neon-toggle {
+  @apply relative inline-flex items-center cursor-pointer;
+}
+
+.neon-toggle-bg {
+  @apply w-12 h-6 bg-slate-300 dark:bg-slate-700 rounded-full transition-all duration-300;
+}
+
+.neon-toggle input:checked + .neon-toggle-bg {
+  @apply bg-indigo-500 dark:bg-[#00f2ff]/30;
+}
+
+.neon-toggle-dot {
+  @apply absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-md;
+}
+
+.neon-toggle input:checked + .neon-toggle-bg + .neon-toggle-dot {
+  @apply translate-x-6 bg-white dark:bg-[#00f2ff] dark:shadow-[0_0_10px_#00f2ff];
+}
+
+/* Glass SMTP Modal-like area */
+.glass-smtp-panel {
+  @apply mt-6 p-8 bg-slate-50 dark:bg-white/[0.03] backdrop-blur-md rounded-[24px] border border-slate-200/50 dark:border-white/10 shadow-inner animate-fade-in;
+}
+
+main {
+  overflow: hidden !important;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
