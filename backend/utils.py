@@ -33,34 +33,60 @@ def send_report_email_async(app, smtp_config, recipient, subject, html_body, pdf
                 from email.mime.multipart import MIMEMultipart
                 from email.mime.application import MIMEApplication
 
+                logger.info(f"Tentative d'envoi d'email à {recipient} via {smtp_config['server']}:{smtp_config['port']}")
+                
                 msg = MIMEMultipart("mixed")
                 msg['Subject'] = subject
                 msg['To'] = recipient
                 msg['From'] = smtp_config['user']
                 msg.attach(MIMEText(html_body, 'html'))
                 
-                attachment = MIMEApplication(pdf_bytes)
-                attachment.add_header('Content-Disposition', 'attachment', filename=filename)
-                msg.attach(attachment)
+                if pdf_bytes:
+                    attachment = MIMEApplication(pdf_bytes)
+                    attachment.add_header('Content-Disposition', 'attachment', filename=filename)
+                    msg.attach(attachment)
 
                 context = ssl.create_default_context()
-                with smtplib.SMTP(smtp_config['server'], smtp_config['port'], timeout=30) as server:
+                
+                # Connexion au serveur SMTP
+                server = None
+                try:
+                    server = smtplib.SMTP(smtp_config['server'], smtp_config['port'], timeout=30)
+                    server.set_debuglevel(1) # Active les logs détaillés de smtplib
+                    
                     if smtp_config.get('use_tls'):
+                        logger.info("Démarrage de TLS...")
                         server.starttls(context=context)
+                    
                     if smtp_config.get('password'):
+                        logger.info(f"Tentative de connexion pour l'utilisateur: {smtp_config['user']}")
                         server.login(smtp_config['user'], smtp_config['password'])
+                    
                     server.send_message(msg)
-                logger.info(f"Email envoyé avec succès à {recipient}")
+                    logger.info(f"Email envoyé avec succès à {recipient}")
+                except smtplib.SMTPAuthenticationError:
+                    logger.error(f"Erreur d'authentification SMTP pour {smtp_config['user']}. Vérifiez le mot de passe d'application.")
+                except smtplib.SMTPConnectError:
+                    logger.error(f"Impossible de se connecter au serveur SMTP {smtp_config['server']}:{smtp_config['port']}")
+                except Exception as e:
+                    logger.error(f"Erreur SMTP spécifique: {str(e)}")
+                finally:
+                    if server:
+                        try:
+                            server.quit()
+                        except:
+                            pass
+                            
             except Exception as e:
-                logger.error(f"Erreur envoi email asynchrone: {str(e)}")
+                logger.error(f"Erreur critique envoi email asynchrone: {str(e)}")
 
     threading.Thread(
         target=send_thread,
         args=(app.app_context(),)
     ).start()
 
-def generate_user_qr_base64(user) -> str | None:
-    """Génère un QR Code en Base64 pour l'utilisateur Expert SOC."""
+def generate_user_qr(user) -> bytes | None:
+    """Génère les octets (PNG) d'un QR Code pour l'utilisateur Expert SOC."""
     try:
         # Robustesse : Vérification de l'utilisateur
         if not user or not hasattr(user, 'first_name') or not hasattr(user, 'last_name') or not hasattr(user, 'email'):
@@ -83,15 +109,21 @@ def generate_user_qr_base64(user) -> str | None:
         # Génération de l'image (nécessite Pillow)
         img = qr.make_image(fill_color="black", back_color="white")
         
-        # Conversion en Base64 via un buffer mémoire
+        # Récupération des octets via un buffer mémoire
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
-        qr_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        
-        return f"data:image/png;base64,{qr_base64}"
+        return buffered.getvalue()
     except Exception as e:
-        logger.error(f"Erreur critique lors de la génération du QR Code : {str(e)}")
+        logger.error(f"Erreur critique lors de la génération des octets du QR Code : {str(e)}")
         return None
+
+def generate_user_qr_base64(user) -> str | None:
+    """Génère un QR Code en Base64 pour l'utilisateur Expert SOC."""
+    qr_bytes = generate_user_qr(user)
+    if qr_bytes:
+        qr_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+        return f"data:image/png;base64,{qr_base64}"
+    return None
 
 def encrypt_ssh_password(password: str) -> str:
     """Chiffre un mot de passe SSH."""
@@ -484,22 +516,38 @@ class SOC_Report(FPDF):
         self.set_auto_page_break(auto=True, margin=25) # Marge basse pour le footer
 
     def header(self):
-        # Chemins absolus vers les logos
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        logo_shield_path = os.path.join(base_dir, "frontend", "src", "assets", "img", "logo.png")
-        logo_awb_path = os.path.join(base_dir, "frontend", "src", "assets", "img", "logo-awb.png")
+        # Chemins absolus vers les logos pour compatibilité Docker et local
+        # On cherche d'abord dans le dossier backend/assets/img/
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Chemin privilégié (backend/assets/img/)
+        logo_shield_path = os.path.join(current_dir, "assets", "img", "logo.png")
+        logo_awb_path = os.path.join(current_dir, "assets", "img", "logo-awb.png")
 
-        # Sauvegarder l'état graphique
+        # Fallback pour le développement local si les fichiers ne sont pas dans backend
+        if not os.path.exists(logo_shield_path):
+            base_dir = os.path.dirname(current_dir)
+            logo_shield_path = os.path.join(base_dir, "frontend", "src", "assets", "img", "logo.png")
+            
+        if not os.path.exists(logo_awb_path):
+            base_dir = os.path.dirname(current_dir)
+            logo_awb_path = os.path.join(base_dir, "frontend", "src", "assets", "img", "logo-awb.png")
+
+        # Sauvegarder l'état graphique et insérer les logos
         try:
             # Logo Tactix à gauche
             if os.path.exists(logo_shield_path):
                 self.image(logo_shield_path, x=10, y=8, h=12)
+            else:
+                logger.warning(f"Logo Shield manquant au chemin : {logo_shield_path}")
             
             # Logo AWB à droite
             if os.path.exists(logo_awb_path):
                 self.image(logo_awb_path, x=175, y=8, h=10)
+            else:
+                logger.warning(f"Logo AWB manquant au chemin : {logo_awb_path}")
         except Exception as e:
-            logger.error(f"Erreur chargement logos PDF: {e}")
+            logger.error(f"Erreur insertion logos PDF: {str(e)}")
 
         # Petit QR Code de Sécurité (15x15mm) - Authentification discrète
         # Positionné juste en dessous du logo AWB à droite
@@ -793,17 +841,17 @@ def send_user_notification(user, subject: str, html_content: str):
     if not user or not user.email:
         return
         
-    # Configuration SMTP depuis les variables d'environnement
+    # Configuration SMTP privilégiant la base de données de l'utilisateur
     smtp_config = {
-        'server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
-        'port': int(os.getenv('SMTP_PORT', 587)),
-        'user': os.getenv('SMTP_USER'),
-        'password': os.getenv('SMTP_PASS'),
+        'server': user.smtp_server or os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
+        'port': user.smtp_port or int(os.getenv('SMTP_PORT', 587)),
+        'user': user.email_sender or os.getenv('SMTP_USER'),
+        'password': decrypt_data(user.email_password_enc) if user.email_password_enc else os.getenv('SMTP_PASS'),
         'use_tls': os.getenv('SMTP_USE_TLS', 'True').lower() == 'true'
     }
     
     if not smtp_config['user'] or not smtp_config['password']:
-        logger.warning("Configuration SMTP incomplète. Notification email annulée.")
+        logger.warning(f"Configuration SMTP incomplète pour l'utilisateur {user.username}. Notification email annulée.")
         return
 
     # Utilise la fonction asynchrone existante pour ne pas bloquer le thread principal
