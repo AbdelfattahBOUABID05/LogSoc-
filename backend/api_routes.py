@@ -981,11 +981,13 @@ def send_report_email():
         return jsonify({"status": "error", "message": "Analyse introuvable"}), 404
         
     # 1. Configuration SMTP
+    # Authentication utilizes real Mailtrap credentials, while the display sender is virtual
     smtp_config = {
-        'server': user.smtp_server or os.getenv("MAIL_SERVER", "smtp.gmail.com"),
-        'port': user.smtp_port or int(os.getenv("MAIL_PORT", 587)),
-        'user': user.email_sender or os.getenv("MAIL_USERNAME", "admin@awb.pfe.ma"),
-        'password': decrypt_data(user.email_password_enc) if user.email_password_enc else os.getenv("MAIL_PASSWORD"),
+        'server': user.smtp_server or os.getenv("SMTP_SERVER", "sandbox.smtp.mailtrap.io"),
+        'port': user.smtp_port or int(os.getenv("SMTP_PORT", 2525)),
+        'user': os.getenv("SMTP_USER", "b1d332e315f09f"), # Mailtrap username
+        'password': os.getenv("SMTP_PASSWORD", "78b1eb63687425"), # Mailtrap password
+        'display_user': user.email_sender or "abdelfattahbouabid@pwd.pfe.ma", # Virtual domain for From
         'use_tls': os.getenv("MAIL_USE_TLS", "True").lower() == "true"
     }
 

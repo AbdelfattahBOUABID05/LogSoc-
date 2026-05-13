@@ -18,8 +18,10 @@ class Config:
     DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@local")
     DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "Admin@12345")
 
-    # Configuration Email (Flask-Mail style)
-    MAIL_SERVER = 'smtp.gmail.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USE_SSL = False
+    # Configuration Email
+    MAIL_SERVER = os.getenv("SMTP_SERVER", "sandbox.smtp.mailtrap.io")
+    MAIL_PORT = int(os.getenv("SMTP_PORT", 2525))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "True").lower() == "true"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "False").lower() == "true"
+    MAIL_USERNAME = os.getenv("SMTP_USER", "b1d332e315f09f")
+    MAIL_PASSWORD = os.getenv("SMTP_PASSWORD", "78b1eb63687425")

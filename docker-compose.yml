@@ -38,6 +38,9 @@ services:
     networks:
       - backend-network
       - frontend-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   # Frontend Angular + Nginx
   frontend:

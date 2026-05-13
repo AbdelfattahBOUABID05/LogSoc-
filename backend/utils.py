@@ -4,6 +4,7 @@ import ssl
 import json
 import re
 import dns.resolver
+import traceback
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -38,7 +39,9 @@ def send_report_email_async(app, smtp_config, recipient, subject, html_body, pdf
                 msg = MIMEMultipart("mixed")
                 msg['Subject'] = subject
                 msg['To'] = recipient
-                msg['From'] = smtp_config['user']
+                # Utilisation de l'email virtuel pour le 'From' et l'email réel pour le 'Reply-To'
+                msg['From'] = smtp_config.get('display_user') or smtp_config['user']
+                msg['Reply-To'] = smtp_config['user']
                 msg.attach(MIMEText(html_body, 'html'))
                 
                 if pdf_bytes:
@@ -48,34 +51,53 @@ def send_report_email_async(app, smtp_config, recipient, subject, html_body, pdf
 
                 context = ssl.create_default_context()
                 
-                # Connexion au serveur SMTP
+                # Connexion au serveur SMTP avec retry logic
                 server = None
-                try:
-                    server = smtplib.SMTP(smtp_config['server'], smtp_config['port'], timeout=30)
-                    server.set_debuglevel(1) # Active les logs détaillés de smtplib
-                    
-                    if smtp_config.get('use_tls'):
-                        logger.info("Démarrage de TLS...")
-                        server.starttls(context=context)
-                    
-                    if smtp_config.get('password'):
-                        logger.info(f"Tentative de connexion pour l'utilisateur: {smtp_config['user']}")
-                        server.login(smtp_config['user'], smtp_config['password'])
-                    
-                    server.send_message(msg)
-                    logger.info(f"Email envoyé avec succès à {recipient}")
-                except smtplib.SMTPAuthenticationError:
-                    logger.error(f"Erreur d'authentification SMTP pour {smtp_config['user']}. Vérifiez le mot de passe d'application.")
-                except smtplib.SMTPConnectError:
-                    logger.error(f"Impossible de se connecter au serveur SMTP {smtp_config['server']}:{smtp_config['port']}")
-                except Exception as e:
-                    logger.error(f"Erreur SMTP spécifique: {str(e)}")
-                finally:
-                    if server:
-                        try:
-                            server.quit()
-                        except:
-                            pass
+                max_retries = 3
+                retry_delay = 5 # secondes
+                
+                for attempt in range(max_retries):
+                    try:
+                        logger.info(f"Tentative d'envoi {attempt + 1}/{max_retries}...")
+                        server = smtplib.SMTP(smtp_config['server'], smtp_config['port'], timeout=30)
+                        server.set_debuglevel(1)
+                        
+                        if smtp_config.get('use_tls'):
+                            logger.info("Démarrage de TLS...")
+                            server.starttls(context=context)
+                        
+                        if smtp_config.get('password'):
+                            logger.info(f"Tentative de connexion pour l'utilisateur: {smtp_config['user']}")
+                            server.login(smtp_config['user'], smtp_config['password'])
+                        
+                        server.send_message(msg)
+                        logger.info(f"Email envoyé avec succès à {recipient}")
+                        break # Succès, on sort de la boucle de retry
+                        
+                    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, ConnectionError) as e:
+                        logger.warning(f"Erreur réseau temporaire (tentative {attempt + 1}): {str(e)}")
+                        if attempt < max_retries - 1:
+                            import time
+                            time.sleep(retry_delay)
+                        else:
+                            raise e
+                    except smtplib.SMTPAuthenticationError:
+                        logger.error(f"Erreur d'authentification SMTP pour {smtp_config['user']}. Vérifiez le mot de passe d'application.")
+                        break # Pas de retry pour une erreur d'authentification
+                    except Exception as e:
+                        logger.error(f"Erreur SMTP spécifique: {str(e)}")
+                        if attempt < max_retries - 1:
+                            import time
+                            time.sleep(retry_delay)
+                        else:
+                            raise e
+                    finally:
+                        if server:
+                            try:
+                                server.quit()
+                            except:
+                                pass
+                            server = None
                             
             except Exception as e:
                 logger.error(f"Erreur critique envoi email asynchrone: {str(e)}")
@@ -84,46 +106,6 @@ def send_report_email_async(app, smtp_config, recipient, subject, html_body, pdf
         target=send_thread,
         args=(app.app_context(),)
     ).start()
-
-def generate_user_qr(user) -> bytes | None:
-    """Génère les octets (PNG) d'un QR Code pour l'utilisateur Expert SOC."""
-    try:
-        # Robustesse : Vérification de l'utilisateur
-        if not user or not hasattr(user, 'first_name') or not hasattr(user, 'last_name') or not hasattr(user, 'email'):
-            logger.error("Tentative de génération de QR pour un utilisateur invalide ou None")
-            return None
-
-        # Données sécurisées : Nom, Prénom, Email uniquement
-        qr_data = f"Expert SOC: {user.first_name} {user.last_name}\nEmail: {user.email}"
-        
-        # Configuration QR Code compatible Pillow 10+
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(qr_data)
-        qr.make(fit=True)
-        
-        # Génération de l'image (nécessite Pillow)
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        # Récupération des octets via un buffer mémoire
-        buffered = io.BytesIO()
-        img.save(buffered, format="PNG")
-        return buffered.getvalue()
-    except Exception as e:
-        logger.error(f"Erreur critique lors de la génération des octets du QR Code : {str(e)}")
-        return None
-
-def generate_user_qr_base64(user) -> str | None:
-    """Génère un QR Code en Base64 pour l'utilisateur Expert SOC."""
-    qr_bytes = generate_user_qr(user)
-    if qr_bytes:
-        qr_base64 = base64.b64encode(qr_bytes).decode('utf-8')
-        return f"data:image/png;base64,{qr_base64}"
-    return None
 
 def encrypt_ssh_password(password: str) -> str:
     """Chiffre un mot de passe SSH."""
@@ -663,6 +645,46 @@ class SOC_Report(FPDF):
 
         self.ln(5)
 
+def generate_user_qr(user) -> bytes | None:
+    """Génère les octets (PNG) d'un QR Code pour l'utilisateur Expert SOC."""
+    try:
+        # Robustesse : Vérification de l'utilisateur
+        if not user or not hasattr(user, 'first_name') or not hasattr(user, 'last_name') or not hasattr(user, 'email'):
+            logger.error("Tentative de génération de QR pour un utilisateur invalide ou None")
+            return None
+
+        # Données sécurisées : Nom, Prénom, Email uniquement
+        qr_data = f"Expert SOC: {user.first_name} {user.last_name}\nEmail: {user.email}"
+        
+        # Configuration QR Code compatible Pillow 10+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+        
+        # Génération de l'image (nécessite Pillow)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Récupération des octets via un buffer mémoire
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        return buffered.getvalue()
+    except Exception as e:
+        logger.error(f"Erreur critique lors de la génération des octets du QR Code : {str(e)}")
+        return None
+
+def generate_user_qr_base64(user) -> str | None:
+    """Génère un QR Code en Base64 pour l'utilisateur Expert SOC."""
+    qr_bytes = generate_user_qr(user)
+    if qr_bytes:
+        qr_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+        return f"data:image/png;base64,{qr_base64}"
+    return None
+
 def generate_pdf_report_bytes(analysis, logs_list=None):
     """
     Génère un rapport PDF professionnel à partir d'une analyse.
@@ -672,14 +694,28 @@ def generate_pdf_report_bytes(analysis, logs_list=None):
     try:
         from models import User
         user = User.query.get(analysis.user_id)
-        qr_bytes = generate_user_qr(user) if user else None
+        
+        # Récupération sécurisée du QR Code de l'analyste
+        qr_bytes = None
+        if user:
+            try:
+                # Vérification de l'existence de la fonction dans le scope local/global
+                if 'generate_user_qr' in globals():
+                    qr_bytes = generate_user_qr(user)
+                else:
+                    logger.error("La fonction 'generate_user_qr' n'est pas définie dans le scope.")
+            except Exception as qr_err:
+                logger.error(f"Erreur lors de la génération du QR Code : {qr_err}")
         
         qr_path = None
         if qr_bytes:
-            qr_temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
-            qr_temp_file.write(qr_bytes)
-            qr_temp_file.close()
-            qr_path = qr_temp_file.name
+            try:
+                qr_temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                qr_temp_file.write(qr_bytes)
+                qr_temp_file.close()
+                qr_path = qr_temp_file.name
+            except Exception as tmp_err:
+                logger.error(f"Erreur lors de la création du fichier QR temporaire : {tmp_err}")
 
         pdf = SOC_Report(qr_path=qr_path)
         pdf.alias_nb_pages()
@@ -827,7 +863,9 @@ def generate_pdf_report_bytes(analysis, logs_list=None):
         return bytes(pdf_content)
 
     except Exception as e:
-        logger.error(f"Erreur génération PDF: {e}")
+        # Log détaillé avec traceback pour identifier la ligne exacte
+        tb = traceback.format_exc()
+        logger.error(f"Erreur critique lors de la génération du PDF : {str(e)}\nTraceback :\n{tb}")
         return None
     finally:
         if qr_temp_file and os.path.exists(qr_temp_file.name):
@@ -843,10 +881,11 @@ def send_user_notification(user, subject: str, html_content: str):
         
     # Configuration SMTP privilégiant la base de données de l'utilisateur
     smtp_config = {
-        'server': user.smtp_server or os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
-        'port': user.smtp_port or int(os.getenv('SMTP_PORT', 587)),
-        'user': user.email_sender or os.getenv('SMTP_USER'),
-        'password': decrypt_data(user.email_password_enc) if user.email_password_enc else os.getenv('SMTP_PASS'),
+        'server': user.smtp_server or os.getenv('SMTP_SERVER', 'sandbox.smtp.mailtrap.io'),
+        'port': user.smtp_port or int(os.getenv('SMTP_PORT', 2525)),
+        'user': os.getenv('SMTP_USER', 'b1d332e315f09f'),
+        'password': os.getenv('SMTP_PASSWORD', '78b1eb63687425'),
+        'display_user': user.email_sender or "abdelfattahbouabid@pwd.pfe.ma",
         'use_tls': os.getenv('SMTP_USE_TLS', 'True').lower() == 'true'
     }
     
