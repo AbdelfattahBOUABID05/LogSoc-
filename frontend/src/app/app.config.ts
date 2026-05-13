@@ -6,6 +6,7 @@ import { provideToastr } from 'ngx-toastr';
 import { routes } from './app.routes';
 import { authInterceptor } from './services/auth.interceptor';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { MatDialogModule } from '@angular/material/dialog';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,6 +15,7 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([authInterceptor])
     ),
+    importProvidersFrom(MatDialogModule),
     provideAnimations(),
     provideToastr({
       positionClass: 'toast-top-right',

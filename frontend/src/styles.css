@@ -100,6 +100,29 @@ h1, h2, h3, h4, h5, h6 {
   @apply transition-all duration-300;
 }
 
+/* Custom MatDialog Styles to match SOC Theme */
+.custom-dialog-container .mat-mdc-dialog-container {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 1.5rem !important;
+}
+
+.custom-dialog-backdrop {
+  background-color: rgba(0, 31, 63, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+}
+
+.cdk-overlay-dark-backdrop {
+  background: rgba(0, 31, 63, 0.8) !important;
+}
+
+/* Scrollbar customization */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @layer components {
   .glass-card {
     background: var(--card-bg);

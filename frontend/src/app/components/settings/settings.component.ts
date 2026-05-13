@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { LogService, SettingsPayload } from '../../services/log.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
+import { CommonDialogService } from '../../services/common-dialog.service';
 
 @Component({
   selector: 'app-settings',
@@ -28,7 +29,11 @@ export class SettingsComponent implements OnInit {
   showAdvanced: boolean = false;
   username: string = 'analyste';
 
-  constructor(private logService: LogService, private http: HttpClient) {}
+  constructor(
+    private logService: LogService, 
+    private http: HttpClient,
+    private dialogService: CommonDialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadSettings();
@@ -64,12 +69,12 @@ export class SettingsComponent implements OnInit {
     this.logService.saveSettings(this.settings).subscribe({
       next: (response: any) => {
         this.loading = false;
-        alert(response.message || 'Paramètres enregistrés avec succès !');
+        this.dialogService.alert('Succès', response.message || 'Paramètres enregistrés avec succès !').subscribe();
       },
       error: (err: any) => {
         this.loading = false;
         const message = err?.error?.message || 'Erreur lors de la sauvegarde des paramètres';
-        alert(message);
+        this.dialogService.alert('Erreur', message).subscribe();
       }
     });
   }

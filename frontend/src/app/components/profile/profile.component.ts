@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../../services/auth.service';
+import { CommonDialogService } from '../../services/common-dialog.service';
 
 @Component({
   selector: 'app-profile',
@@ -27,7 +28,11 @@ export class ProfileComponent implements OnInit {
 
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(
+    private http: HttpClient, 
+    private authService: AuthService,
+    private dialogService: CommonDialogService
+  ) {}
 
   ngOnInit(): void {
     this.loadUserData();
@@ -68,19 +73,19 @@ export class ProfileComponent implements OnInit {
 
   changePassword(): void {
     if (this.passwords.new !== this.passwords.confirm) {
-      alert('Les nouveaux mots de passe ne correspondent pas.');
+      this.dialogService.alert('Attention', 'Les nouveaux mots de passe ne correspondent pas.').subscribe();
       return;
     }
     this.loadingPass = true;
     this.http.post(`${this.apiUrl}/profile/change-password`, this.passwords).subscribe({
       next: () => {
-        alert('Mot de passe mis à jour avec succès !');
+        this.dialogService.alert('Succès', 'Mot de passe mis à jour avec succès !').subscribe();
         this.authService.updateFirstLoginStatus(false);
         this.passwords = { old: '', new: '', confirm: '' };
         this.loadingPass = false;
       },
-      error: (err) => {
-        alert(err.error?.message || 'Erreur lors de la mise à jour');
+      error: (err: any) => {
+        this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la mise à jour').subscribe();
         this.loadingPass = false;
       }
     });

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { SidebarComponent } from '../../sidebar/sidebar.component';
 import { environment } from '../../../../environments/environment';
+import { CommonDialogService } from '../../../services/common-dialog.service';
 
 interface User {
   id?: number;
@@ -30,7 +31,10 @@ export class UserManagementComponent implements OnInit {
   userForm: User = { username: '', email: '', firstName: '', lastName: '', role: 'Analyseur', password: '' };
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private dialogService: CommonDialogService
+  ) {}
 
   ngOnInit(): void {
     this.fetchUsers();
@@ -38,8 +42,8 @@ export class UserManagementComponent implements OnInit {
 
   fetchUsers(): void {
     this.http.get<{ status: string; users: User[] }>(`${this.apiUrl}/admin/users`).subscribe({
-      next: (res) => this.users = res.users,
-      error: (err) => console.error('Error fetching users:', err)
+      next: (res: any) => this.users = res.users,
+      error: (err: any) => console.error('Error fetching users:', err)
     });
   }
 
@@ -66,8 +70,9 @@ export class UserManagementComponent implements OnInit {
         next: () => {
           this.fetchUsers();
           this.closeModal();
+          this.dialogService.alert('Succès', 'Utilisateur mis à jour avec succès').subscribe();
         },
-        error: (err) => alert(err.error?.message || 'Erreur lors de la mise à jour')
+        error: (err: any) => this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la mise à jour').subscribe()
       });
     } else {
       // Create
@@ -75,28 +80,43 @@ export class UserManagementComponent implements OnInit {
         next: () => {
           this.fetchUsers();
           this.closeModal();
+          this.dialogService.alert('Succès', 'Utilisateur créé avec succès').subscribe();
         },
-        error: (err) => alert(err.error?.message || 'Erreur lors de la création')
+        error: (err: any) => this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la création').subscribe()
       });
     }
   }
 
   deleteUser(user: User): void {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer l\\'utilisateur ${user.username} ?`)) {
-      this.http.delete(`${this.apiUrl}/admin/users/${user.id}`).subscribe({
-        next: () => this.fetchUsers(),
-        error: (err) => alert(err.error?.message || 'Erreur lors de la suppression')
-      });
-    }
+    this.dialogService.confirm(
+      'Suppression',
+      `Êtes-vous sûr de vouloir supprimer l'utilisateur ${user.username} ?`
+    ).subscribe((confirmed: boolean | null) => {
+      if (confirmed) {
+        this.http.delete(`${this.apiUrl}/admin/users/${user.id}`).subscribe({
+          next: () => {
+            this.fetchUsers();
+            this.dialogService.alert('Succès', 'Utilisateur supprimé avec succès').subscribe();
+          },
+          error: (err: any) => this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la suppression').subscribe()
+        });
+      }
+    });
   }
 
   resetPassword(user: User): void {
-    const newPass = prompt(`Entrez le nouveau mot de passe pour ${user.username} :`);
-    if (newPass) {
-      this.http.put(`${this.apiUrl}/admin/users/${user.id}`, { password: newPass }).subscribe({
-        next: () => alert('Mot de passe réinitialisé avec succès'),
-        error: (err) => alert(err.error?.message || 'Erreur lors de la réinitialisation')
-      });
-    }
+    this.dialogService.prompt(
+      'Réinitialisation',
+      `Entrez le nouveau mot de passe pour ${user.username} :`,
+      'Nouveau mot de passe',
+      'password'
+    ).subscribe((newPass: string | null) => {
+      if (newPass) {
+        this.http.put(`${this.apiUrl}/admin/users/${user.id}`, { password: newPass }).subscribe({
+          next: () => this.dialogService.alert('Succès', 'Mot de passe réinitialisé avec succès').subscribe(),
+          error: (err: any) => this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la réinitialisation').subscribe()
+        });
+      }
+    });
   }
 }
