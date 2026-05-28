@@ -1,6 +1,7 @@
 import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { LogService, Analysis } from '../../services/log.service';
 import { NotificationService } from '../../services/notification.service';
@@ -17,7 +18,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-report',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, RouterModule, MatTabsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, SidebarComponent, RouterModule, MatTabsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css']
 })
@@ -48,6 +49,12 @@ export class ReportComponent implements OnInit, AfterViewInit {
   qrCodeBase64: string | null = null;
   chart: Chart | null = null;
 
+  // Filtrage des logs
+  logSearchQuery = '';
+  filteredErrorLogs: any[] = [];
+  filteredWarningLogs: any[] = [];
+  filteredInfoLogs: any[] = [];
+
   private apiUrl = environment.apiUrl;
 
   constructor(
@@ -63,7 +70,7 @@ export class ReportComponent implements OnInit, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       const id = params['id'];
       if (id) {
-        this.fetchAnalysisDetails(+id);
+        this.fetchAnalysisDetails(id);
       }
     });
     this.loadExpertInfo();
@@ -95,7 +102,7 @@ export class ReportComponent implements OnInit, AfterViewInit {
     });
   }
 
-  fetchAnalysisDetails(id: number): void {
+  fetchAnalysisDetails(id: string): void {
     this.loading = true;
     this.logService.getAnalysis(id).subscribe({
       next: (data) => {
@@ -161,7 +168,45 @@ export class ReportComponent implements OnInit, AfterViewInit {
     this.infoLogs = Array.isArray(this.infoLogs) ? this.infoLogs : [];
 
     console.log(`Logs filtrés : ${this.errorLogs.length} Errors, ${this.warningLogs.length} Warnings, ${this.infoLogs.length} Infos`);
+    this.applyLogFilter();
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Applique un filtrage réactif sur les listes de logs en fonction de la recherche utilisateur.
+   * Cette méthode est appelée à chaque modification de la barre de recherche.
+   */
+  applyLogFilter(): void {
+    const query = this.logSearchQuery.toLowerCase().trim();
+    
+    if (!query) {
+      this.filteredErrorLogs = [...this.errorLogs];
+      this.filteredWarningLogs = [...this.warningLogs];
+      this.filteredInfoLogs = [...this.infoLogs];
+    } else {
+      const filterFn = (log: any) => {
+        const msg = this.getLogMessage(log).toLowerCase();
+        return msg.includes(query);
+      };
+
+      this.filteredErrorLogs = this.errorLogs.filter(filterFn);
+      this.filteredWarningLogs = this.warningLogs.filter(filterFn);
+      this.filteredInfoLogs = this.infoLogs.filter(filterFn);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /** Réinitialise la barre de recherche des logs */
+  clearLogSearch(): void {
+    this.logSearchQuery = '';
+    this.applyLogFilter();
+  }
+
+  /** Récupère le message textuel d'un log quel que soit son format (objet ou chaîne) */
+  getLogMessage(log: any): string {
+    if (!log) return '';
+    if (typeof log === 'string') return log;
+    return log.message || log.raw || log.content || JSON.stringify(log);
   }
 
   processAggregatedLogs(): void {
@@ -304,12 +349,6 @@ export class ReportComponent implements OnInit, AfterViewInit {
     if (s.includes('critique') || s.includes('danger') || s.includes('error')) return `${baseClass} bg-rose-500/20 text-rose-400 border-rose-500/20`;
     if (s.includes('attention') || s.includes('warning') || s.includes('moyen')) return `${baseClass} bg-amber-500/20 text-amber-400 border-amber-500/20`;
     return `${baseClass} bg-emerald-500/20 text-emerald-400 border-emerald-500/20`;
-  }
-
-  getLogMessage(log: any): string {
-    if (!log) return '';
-    if (typeof log === 'string') return log;
-    return log.message || log.raw || log.content || JSON.stringify(log);
   }
 }
 

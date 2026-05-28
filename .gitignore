@@ -4,7 +4,6 @@ venv/
 .env
 static/uploads/*
 !static/uploads/.gitkeep
-MV_Fedora/
 instance/
 *.db
 uploads/
@@ -12,3 +11,4 @@ uploads/
 .angular/
 node_modules/
 dist/
+rapport/

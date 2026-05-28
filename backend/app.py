@@ -1,10 +1,12 @@
 import os
+import uuid
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_login import LoginManager
 from dotenv import load_dotenv
 import logging
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import inspect, text
 
 from config import Config
 from extensions import db, scheduler
@@ -22,6 +24,133 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def ensure_analysis_public_id_schema():
+    """
+    Met à niveau le schéma de `analyses` sur une base déjà existante.
+    `db.create_all()` ne modifie pas les tables créées auparavant, donc on
+    ajoute explicitement `public_id` si la colonne n'existe pas encore.
+    """
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+    if "analyses" not in tables:
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("analyses")}
+    if "public_id" not in columns:
+        logger.info("Migration: ajout de la colonne analyses.public_id")
+        db.session.execute(text("ALTER TABLE analyses ADD COLUMN public_id VARCHAR(36)"))
+        db.session.commit()
+
+    missing_rows = db.session.execute(
+        text("SELECT id FROM analyses WHERE public_id IS NULL OR public_id = ''")
+    ).fetchall()
+
+    if missing_rows:
+        logger.info("Migration: génération des public_id manquants pour les analyses existantes")
+        for row in missing_rows:
+            db.session.execute(
+                text("UPDATE analyses SET public_id = :public_id WHERE id = :id"),
+                {"public_id": str(uuid.uuid4()), "id": row.id},
+            )
+        db.session.commit()
+
+    # Un index unique protège contre les doublons côté base sans impacter la logique existante.
+    db.session.execute(
+        text("CREATE UNIQUE INDEX IF NOT EXISTS ix_analyses_public_id ON analyses (public_id)")
+    )
+    db.session.commit()
+
+
+def ensure_analysis_job_schema():
+    """
+    Met à niveau le schéma de `analysis_jobs` sur une base déjà existante.
+    Ajoute `name` et `public_id` si nécessaires.
+    """
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
+    if "analysis_jobs" not in tables:
+        return
+
+    columns = {col["name"] for col in inspector.get_columns("analysis_jobs")}
+    
+    # Gestion de la colonne 'name'
+    if "name" not in columns:
+        logger.info("Migration: ajout de la colonne analysis_jobs.name")
+        db.session.execute(text("ALTER TABLE analysis_jobs ADD COLUMN name VARCHAR(150)"))
+        db.session.commit()
+
+    unnamed_rows = db.session.execute(
+        text("SELECT id, target_ip FROM analysis_jobs WHERE name IS NULL OR name = ''")
+    ).fetchall()
+    if unnamed_rows:
+        logger.info("Migration: génération des noms manquants pour les jobs existants")
+        for row in unnamed_rows:
+            default_name = f"Job {row.id} - {row.target_ip}"
+            db.session.execute(
+                text("UPDATE analysis_jobs SET name = :name WHERE id = :id"),
+                {"name": default_name, "id": row.id},
+            )
+        db.session.commit()
+
+    # Gestion de la colonne 'public_id'
+    if "public_id" not in columns:
+        logger.info("Migration: ajout de la colonne analysis_jobs.public_id")
+        db.session.execute(text("ALTER TABLE analysis_jobs ADD COLUMN public_id VARCHAR(36)"))
+        db.session.commit()
+
+    missing_uuids = db.session.execute(
+        text("SELECT id FROM analysis_jobs WHERE public_id IS NULL OR public_id = ''")
+    ).fetchall()
+    if missing_uuids:
+        logger.info("Migration: génération des public_id manquants pour les jobs existants")
+        for row in missing_uuids:
+            db.session.execute(
+                text("UPDATE analysis_jobs SET public_id = :public_id WHERE id = :id"),
+                {"public_id": str(uuid.uuid4()), "id": row.id},
+            )
+        db.session.commit()
+
+    # Index unique pour public_id
+    db.session.execute(
+        text("CREATE UNIQUE INDEX IF NOT EXISTS ix_analysis_jobs_public_id ON analysis_jobs (public_id)")
+    )
+    db.session.commit()
+
+
+def create_default_admin():
+    """Crée l'administrateur par défaut si nécessaire."""
+    admin_username = os.getenv('DEFAULT_ADMIN_USERNAME', 'admin')
+    admin_user = User.query.filter_by(username=admin_username).first()
+    
+    if not admin_user:
+        logger.info(f"Création de l'administrateur par défaut : {admin_username}")
+        admin_user = User(
+            username=admin_username,
+            email=os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@soc.local'),
+            first_name='Admin',
+            last_name='SOC',
+            role='Admin',
+            is_first_login=False
+        )
+        admin_user.set_password(os.getenv('DEFAULT_ADMIN_PASSWORD', 'Admin@12345'))
+        db.session.add(admin_user)
+        
+        try:
+            db.session.commit()
+            logger.info("✅ Administrateur par défaut créé avec succès.")
+        except IntegrityError:
+            db.session.rollback()
+            logger.info("ℹ️ L'administrateur a déjà été créé par un autre worker.")
+    else:
+        if admin_user.role != 'Admin':
+            admin_user.role = 'Admin'
+            db.session.commit()
+            logger.info("🔄 Rôle Admin mis à jour.")
+        else:
+            logger.info("ℹ️ Compte Admin configuré.")
+
+
 def setup_database(app):
     """
     Initialise la base de données et crée l'administrateur par défaut.
@@ -30,40 +159,12 @@ def setup_database(app):
     with app.app_context():
         try:
             db.create_all()
-            
-            admin_username = os.getenv('DEFAULT_ADMIN_USERNAME', 'admin')
-            admin_user = User.query.filter_by(username=admin_username).first()
-            
-            if not admin_user:
-                logger.info(f"Création de l'administrateur par défaut : {admin_username}")
-                admin_user = User(
-                    username=admin_username,
-                    email=os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@soc.local'),
-                    first_name='Admin',
-                    last_name='SOC',
-                    role='Admin',
-                    is_first_login=False
-                )
-                admin_user.set_password(os.getenv('DEFAULT_ADMIN_PASSWORD', 'Admin@12345'))
-                db.session.add(admin_user)
-                
-                try:
-                    db.session.commit()
-                    logger.info("✅ Administrateur par défaut créé avec succès.")
-                except IntegrityError:
-                    db.session.rollback()
-                    logger.info("ℹ️ L'administrateur a déjà été créé par un autre worker.")
-            else:
-                if admin_user.role != 'Admin':
-                    admin_user.role = 'Admin'
-                    db.session.commit()
-                    logger.info("🔄 Rôle Admin mis à jour.")
-                else:
-                    logger.info("ℹ️ Compte Admin configuré.")
-
+            ensure_analysis_public_id_schema()
+            ensure_analysis_job_schema()
+            create_default_admin()
         except Exception as e:
+            logger.error(f"Erreur lors de l'initialisation de la base : {e}")
             db.session.rollback()
-            logger.error(f"❌ Erreur lors de l'initialisation de la DB : {e}")
 
 def create_app():
     """Application Factory pour initialiser Flask proprement."""
@@ -90,6 +191,9 @@ def create_app():
     init_scheduler(app)
 
     return app
+
+
+
 
 # Instance pour Gunicorn
 app = create_app()

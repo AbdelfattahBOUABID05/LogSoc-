@@ -34,7 +34,7 @@
           <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50/50 dark:bg-white/5 text-slate-900 dark:text-white uppercase text-[10px] font-black tracking-widest border-b border-slate-200 dark:border-white/10">
               <tr>
-                <th class="px-8 py-6">Serveur (IP)</th>
+                <th class="px-8 py-6">Nom du Job</th>
                 <th class="px-8 py-6">Chemin du Log</th>
                 <th class="px-8 py-6">Fréquence</th>
                 <th class="px-8 py-6">Statut</th>
@@ -46,7 +46,10 @@
                 <td class="px-8 py-5">
                   <div class="flex items-center gap-4">
                     <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(79,70,229,0.5)]"></div>
-                    <span class="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">{{ job.target_ip }}</span>
+                    <div class="flex flex-col">
+                      <span class="font-black text-xs text-slate-900 dark:text-white uppercase tracking-tight">{{ job.name }}</span>
+                      <span class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{{ job.target_ip }}</span>
+                    </div>
                   </div>
                 </td>
                 <td class="px-8 py-5">
@@ -74,6 +77,11 @@
                 </td>
                 <td class="px-8 py-5">
                   <div class="flex items-center justify-center gap-3">
+                    <button (click)="viewJobHistory(job.public_id)"
+                            class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all flex items-center justify-center group/btn shadow-lg shadow-indigo-500/5"
+                            title="Voir l'historique">
+                      <i class="fas fa-history text-xs group-hover/btn:scale-110 transition-transform"></i>
+                    </button>
                     <button *ngIf="job.status === 'active' || job.status === 'inactive'"
                             (click)="toggleJob(job.id)" 
                             [disabled]="togglingJobId === job.id"
@@ -130,6 +138,15 @@
           
           <div class="p-10 space-y-8 max-h-[70vh] overflow-y-auto no-scrollbar">
             <div class="grid grid-cols-2 gap-8">
+              <div class="space-y-3">
+                <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Nom du Job</label>
+                <div class="relative group/input">
+                  <i class="fas fa-tag absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
+                  <input type="text" [(ngModel)]="newJob.name" 
+                         class="w-full pl-12 pr-5 py-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-bold placeholder-slate-400 dark:placeholder-white/10" 
+                         placeholder="Audit SSH quotidien AWB">
+                </div>
+              </div>
               <div class="space-y-3">
                 <label class="block text-[10px] font-black text-slate-500 dark:text-white/30 uppercase tracking-[0.2em] ml-1">Cible Serveur (IP)</label>
                 <div class="relative group/input">

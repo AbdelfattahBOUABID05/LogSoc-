@@ -1,6 +1,6 @@
 import { Component, OnInit, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LogService, Analysis } from '../../services/log.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -15,6 +15,7 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 export class LogHistoryComponent implements OnInit {
   // Signaux Angular 17 pour une gestion d'état réactive et performante
   private allAnalyses = signal<Analysis[]>([]);
+  currentJobPublicId: string | null = null;
   searchQuery = signal<string>('');
   filterDate = signal<string>('');
 
@@ -36,28 +37,34 @@ export class LogHistoryComponent implements OnInit {
       // Filtrage multi-critères (Serveur, Fichier, Statut, Type de source)
       if (!query) return true;
 
-      const serverMatch = (a.server_ip || 'Machine Locale').toLowerCase().includes(query);
+      const targetMatch = (a.job_name || a.server_ip || 'Machine Locale').toLowerCase().includes(query);
       const fileMatch = (a.file_path || '').toLowerCase().includes(query);
       const statusMatch = (a.ai_status || '').toLowerCase().includes(query);
       const typeMatch = (a.source_type || '').toLowerCase().includes(query);
 
-      return serverMatch || fileMatch || statusMatch || typeMatch;
+      return targetMatch || fileMatch || statusMatch || typeMatch;
     });
   });
 
-  constructor(private logService: LogService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private logService: LogService,
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
-    // Chargement de l'historique complet lors de l'initialisation
-    this.loadAnalyses();
+    this.route.queryParams.subscribe(params => {
+      this.currentJobPublicId = params['job_id'] || null;
+      this.loadAnalyses(this.currentJobPublicId);
+    });
   }
 
   /**
    * Appelle le backend pour récupérer toutes les analyses passées.
    * Les données sont ensuite formatées pour assurer la cohérence de l'affichage.
    */
-  loadAnalyses(): void {
-    this.logService.getAnalyses().subscribe({
+  loadAnalyses(jobId?: string | null): void {
+    this.logService.getAnalyses(jobId).subscribe({
       next: (data) => {
         if (data.status === 'success') {
           const mapped = (data.analyses || []).map((analysis) => ({
@@ -96,6 +103,10 @@ export class LogHistoryComponent implements OnInit {
     this.filterDate.set('');
   }
 
+  getTargetDisplay(analysis: Analysis): string {
+    return analysis.job_name || analysis.server_ip || 'Audit Local';
+  }
+
   /** Formate la date ISO en format lisible français (JJ/MM/AAAA HH:mm) */
   formatDate(dateStr: string | null): string {
     if (!dateStr) return 'N/A';
@@ -120,12 +131,12 @@ export class LogHistoryComponent implements OnInit {
     return base + 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20';
   }
 
-  /** Redirige vers la page de rapport détaillé de l'analyse */
+  /** Redirige vers la page de rapport détaillé de l'analyse via son UUID public */
   viewDetails(analysis: Analysis): void {
     window.location.href = `/report?id=${analysis.id}`;
   }
 
-  /** Supprime une analyse après confirmation */
+  /** Supprime une analyse après confirmation via son UUID public */
   deleteAnalysis(analysis: Analysis): void {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette analyse ? Cette action est irréversible.')) {
       this.logService.deleteAnalysis(analysis.id).subscribe({

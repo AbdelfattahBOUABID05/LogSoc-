@@ -38,11 +38,13 @@ export interface SocStatsResponse {
 
 // Interfaces existantes pour la compatibilité
 export interface Analysis {
-  id: number;
+  id: string; // Utilisation du public_id (UUID) pour la sécurité (IDOR prevention)
   created_at: string;
   source_type: string;
   source_path: string;
   server_ip: string;
+  job_id?: number | null;
+  job_name?: string | null;
   stats: {
     errors: number;
     warnings: number;
@@ -129,6 +131,8 @@ export interface SettingsPayload {
 
 export interface Job {
   id: number;
+  public_id: string;
+  name: string;
   user_id: number;
   username: string;
   target_ip: string;
@@ -236,8 +240,8 @@ export class LogService {
   // ========== MÉTHODES POUR LES JOBS (TÂCHES PLANIFIÉES) ==========
 
   /** Récupère la liste des jobs de l'utilisateur */
-  getJobs(): Observable<{ status: string; jobs: any[] }> {
-    return this.http.get<{ status: string; jobs: any[] }>(`${this.apiUrl}/jobs`);
+  getJobs(): Observable<{ status: string; jobs: Job[] }> {
+    return this.http.get<{ status: string; jobs: Job[] }>(`${this.apiUrl}/jobs`);
   }
 
   /** Crée une nouvelle tâche d'analyse automatisée */
@@ -294,23 +298,24 @@ export class LogService {
     return this.http.get<DashboardResponse>(`${this.apiUrl}/dashboard`);
   }
 
-  /** Récupère l'historique de toutes les analyses */
-  getAnalyses(): Observable<AnalysesResponse> {
-    return this.http.get<AnalysesResponse>(`${this.apiUrl}/analyses`);
+  /** Récupère l'historique de toutes les analyses (avec filtrage optionnel par job via public_id) */
+  getAnalyses(jobId?: string | null): Observable<AnalysesResponse> {
+    const query = jobId != null ? `?job_id=${jobId}` : '';
+    return this.http.get<AnalysesResponse>(`${this.apiUrl}/analyses${query}`);
   }
 
-  /** Récupère les détails d'une analyse via son identifiant */
-  getAnalysis(id: number): Observable<{ status: string; analysis: Analysis }> {
+  /** Récupère les détails d'une analyse via son identifiant public (UUID) */
+  getAnalysis(id: string): Observable<{ status: string; analysis: Analysis }> {
     return this.http.get<{ status: string; analysis: Analysis }>(`${this.apiUrl}/analyses/${id}`);
   }
 
-  /** Supprime définitivement une analyse de l'historique */
-  deleteAnalysis(id: number): Observable<{ status: string; message: string }> {
+  /** Supprime définitivement une analyse de l'historique via son UUID */
+  deleteAnalysis(id: string): Observable<{ status: string; message: string }> {
     return this.http.delete<{ status: string; message: string }>(`${this.apiUrl}/analyses/${id}`);
   }
 
-  /** Génère et récupère le flux binaire du rapport PDF */
-  downloadAnalysisPdf(id: number): Observable<Blob> {
+  /** Génère et récupère le flux binaire du rapport PDF via l'UUID */
+  downloadAnalysisPdf(id: string): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/analyses/${id}/pdf`, {
       responseType: 'blob'
     });

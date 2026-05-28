@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
@@ -59,6 +60,7 @@ class Analysis(db.Model):
     __tablename__ = "analyses"
 
     id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     job_id = db.Column(db.Integer, db.ForeignKey("analysis_jobs.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
@@ -90,7 +92,9 @@ class AnalysisJob(db.Model):
     __tablename__ = "analysis_jobs"
 
     id = db.Column(db.Integer, primary_key=True)
+    public_id = db.Column(db.String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = db.Column(db.String(150), nullable=False, default="Job planifie")
     
     # Paramètres de connexion et cible
     target_ip = db.Column(db.String(64), nullable=False)
@@ -123,7 +127,7 @@ class AnalysisJob(db.Model):
     user = db.relationship("User", backref=db.backref("scheduled_jobs", lazy="dynamic"))
 
     def __repr__(self):
-        return f"<AnalysisJob {self.id} - {self.target_ip} - {self.status}>"
+        return f"<AnalysisJob {self.id} - {self.name} - {self.target_ip} - {self.status}>"
 
 
 class SavedServer(db.Model):

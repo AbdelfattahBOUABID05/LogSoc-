@@ -320,8 +320,8 @@ def get_gemini_model():
     try:
         # Utilisation de la configuration stable du SDK
         genai.configure(api_key=api_key)
-        # Utilisation de gemini-1.5-flash-latest pour la stabilité
-        return genai.GenerativeModel("gemini-1.5-flash-latest")
+        # Utilisation du modèle stable compatible avec l'API v1beta
+        return genai.GenerativeModel("gemini-1.5-flash")
     except Exception as e:
         logger.error(f"Erreur lors de l'initialisation de Google Generative AI : {str(e)}")
         raise

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { LogService } from '../../services/log.service';
 import { NotificationService } from '../../services/notification.service';
@@ -20,6 +21,7 @@ export class JobsComponent implements OnInit {
   
   // Objet représentant une nouvelle tâche à planifier
   newJob = {
+    name: '',
     target_ip: '',
     log_path: '/var/log/syslog',
     frequency: 'daily',
@@ -31,7 +33,8 @@ export class JobsComponent implements OnInit {
 
   constructor(
     private logService: LogService,
-    private notify: NotificationService
+    private notify: NotificationService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -56,7 +59,7 @@ export class JobsComponent implements OnInit {
 
   /** Envoie une demande de création de nouveau job au backend */
   createJob(): void {
-    if (!this.newJob.target_ip || !this.newJob.ssh_user || !this.newJob.ssh_pass) {
+    if (!this.newJob.name || !this.newJob.target_ip || !this.newJob.ssh_user || !this.newJob.ssh_pass) {
       this.notify.warning('Veuillez remplir tous les champs obligatoires.');
       return;
     }
@@ -68,6 +71,7 @@ export class JobsComponent implements OnInit {
         this.fetchScheduledJobs();
         // Réinitialisation du formulaire après succès
         this.newJob = { 
+          name: '',
           target_ip: '', 
           log_path: '/var/log/syslog', 
           frequency: 'daily', 
@@ -130,6 +134,13 @@ export class JobsComponent implements OnInit {
         this.notify.error('Erreur lors de la modification du statut.');
         this.togglingJobId = null;
       }
+    });
+  }
+
+  /** Redirige vers l'historique filtré par ce job spécifique via son UUID public */
+  viewJobHistory(jobId: string): void {
+    this.router.navigate(['/history'], { 
+      queryParams: { job_id: jobId } 
     });
   }
 }

@@ -226,6 +226,7 @@ def get_analyses():
     """
     user = request.current_user
     period = request.args.get('period', '7d')
+    job_public_id = request.args.get('job_id')  # On récupère l'ID public (UUID)
     now = datetime.now(timezone.utc)
     until = now
 
@@ -239,23 +240,31 @@ def get_analyses():
         since = now - timedelta(days=7)
 
     # Requête avec filtrage temporel et tri décroissant (plus récent en premier)
-    analyses = Analysis.query.filter(
+    query = Analysis.query.filter(
         Analysis.user_id == user.id,
         Analysis.created_at >= since,
         Analysis.created_at <= until
-    ).order_by(Analysis.created_at.desc()).limit(100).all()
+    )
+    
+    if job_public_id:
+        # On filtre par le public_id du Job associé
+        query = query.join(AnalysisJob).filter(AnalysisJob.public_id == job_public_id)
+
+    analyses = query.order_by(Analysis.created_at.desc()).limit(100).all()
 
     return jsonify({
         "status": "success",
         "count": len(analyses),
         "analyses": [
             {
-                "id": a.id,
+                "id": a.public_id,
                 "created_at": a.created_at.isoformat() if a.created_at else None,
                 "source_type": a.source_type,
                 "source_path": a.source_path,
                 "file_path": a.file_path,
                 "server_ip": a.server_ip,
+                "job_id": a.job_id,
+                "job_name": a.job.name if a.job else None,
                 "stats": a.stats,
                 "ai_score": a.ai_score,
                 "ai_status": a.ai_status,
@@ -265,19 +274,19 @@ def get_analyses():
         ]
     })
 
-@api.route('/analyses/<int:analysis_id>', methods=['GET'])
+@api.route('/analyses/<string:public_id>', methods=['GET'])
 @token_required
-def get_analysis(analysis_id):
-    """Récupère les détails complets d'une analyse spécifique via son ID"""
+def get_analysis(public_id):
+    """Récupère les détails complets d'une analyse spécifique via son ID public (UUID)"""
     user = request.current_user
-    a = Analysis.query.filter_by(id=analysis_id, user_id=user.id).first()
+    a = Analysis.query.filter_by(public_id=public_id, user_id=user.id).first()
     if not a:
         return jsonify({"status": "error", "message": "Analyse introuvable"}), 404
 
     return jsonify({
         "status": "success",
         "analysis": {
-            "id": a.id,
+            "id": a.public_id,
             "created_at": a.created_at.isoformat() if a.created_at else None,
             "source_type": a.source_type,
             "source_path": a.source_path,
@@ -292,11 +301,11 @@ def get_analysis(analysis_id):
         }
     })
 
-@api.route('/analyses/<int:analysis_id>/pdf', methods=['GET'])
+@api.route('/analyses/<string:public_id>/pdf', methods=['GET'])
 @token_required
-def get_analysis_pdf(analysis_id):
+def get_analysis_pdf(public_id):
     user = request.current_user
-    a = Analysis.query.filter_by(id=analysis_id, user_id=user.id).first()
+    a = Analysis.query.filter_by(public_id=public_id, user_id=user.id).first()
     if not a:
         return jsonify({"status": "error", "message": "Analyse introuvable"}), 404
     
@@ -308,19 +317,19 @@ def get_analysis_pdf(analysis_id):
     # Audit Log
     save_audit(
         action="EXPORT_PDF",
-        details=f"Rapport PDF généré pour l'analyse #{analysis_id} (Source: {a.source_path})"
+        details=f"Rapport PDF généré pour l'analyse (Public ID: {public_id}, Source: {a.source_path})"
     )
         
     response = make_response(pdf_bytes)
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=Rapport_Audit_{analysis_id}.pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=Rapport_Audit_{public_id}.pdf'
     return response
 
-@api.route('/analyses/<int:analysis_id>', methods=['DELETE'])
+@api.route('/analyses/<string:public_id>', methods=['DELETE'])
 @token_required
-def delete_analysis(analysis_id):
+def delete_analysis(public_id):
     user = request.current_user
-    a = Analysis.query.filter_by(id=analysis_id, user_id=user.id).first()
+    a = Analysis.query.filter_by(public_id=public_id, user_id=user.id).first()
     if not a:
         return jsonify({"status": "error", "message": "Analyse introuvable"}), 404
     
@@ -497,7 +506,7 @@ def get_dashboard():
         meta = dict(last_analysis.meta or {})
         meta["severity_counts"] = severity_counts
         results = {
-            "analysis_id": last_analysis.id,
+            "analysis_id": last_analysis.public_id,
             "created_at": last_analysis.created_at.isoformat() if last_analysis.created_at else None,
             "server_ip": last_analysis.server_ip,
             "ai_score": last_analysis.ai_score,
@@ -649,7 +658,7 @@ def ssh_analyze():
 
         db.session.commit()
 
-        return jsonify({"status": "success", "analysis_id": analysis.id})
+        return jsonify({"status": "success", "analysis_id": analysis.public_id})
     except Exception as e:
         return jsonify({"status": "error", "message": f"Erreur lors de l'analyse SSH : {str(e)}"}), 500
 
@@ -801,7 +810,7 @@ def analyze_local():
         return jsonify({
             "status": "success", 
             "message": "Analyse terminée avec succès",
-            "analysis_id": analysis.id,
+            "analysis_id": analysis.public_id,
             "kb_matches": matched_solutions
         })
     except Exception as e:
@@ -864,7 +873,7 @@ def upload_file():
         db.session.add(analysis)
         db.session.commit()
 
-        return jsonify({"status": "success", "analysis_id": analysis.id})
+        return jsonify({"status": "success", "analysis_id": analysis.public_id})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -884,6 +893,8 @@ def get_user_jobs():
         "jobs": [
             {
                 "id": j.id,
+                "public_id": j.public_id,
+                "name": j.name,
                 "target_ip": j.target_ip,
                 "log_path": j.log_path,
                 "frequency": j.frequency,
@@ -905,6 +916,7 @@ def create_user_job():
     
     new_job = AnalysisJob(
         user_id=user.id,
+        name=(data.get('name') or f"Job {data.get('target_ip')}").strip(),
         target_ip=data.get('target_ip'),
         log_path=data.get('log_path', '/var/log/syslog'),
         frequency=data.get('frequency', 'daily'),
@@ -920,7 +932,7 @@ def create_user_job():
     # Audit Log
     save_audit(
         action="JOB_CREATED",
-        details=f"Nouveau job planifié : #{new_job.id} sur {new_job.target_ip} (Fréquence: {new_job.frequency})"
+        details=f"Nouveau job planifié : {new_job.name} sur {new_job.target_ip} (Frequence: {new_job.frequency})"
     )
 
     # Alerter les admins
@@ -929,7 +941,7 @@ def create_user_job():
         notif = Notification(
             user_id=admin.id,
             title="Nouvelle demande de Job",
-            message=f"L'analyste {user.username} a créé une demande pour {new_job.target_ip}.",
+            message=f"L'analyste {user.username} a cree la demande '{new_job.name}' pour {new_job.target_ip}.",
             type="info",
             link=f"/admin/jobs"
         )
@@ -970,14 +982,14 @@ def delete_user_job(job_id):
 def send_report_email():
     user = request.current_user
     data = request.get_json()
-    analysis_id = data.get('analysis_id')
+    public_id = data.get('analysis_id') # Le frontend enverra maintenant le public_id
     recipient = data.get('recipient') or data.get('email') or user.notification_email or user.email
     
-    if not analysis_id or not recipient:
+    if not public_id or not recipient:
         return jsonify({"status": "error", "message": "ID d'analyse ou destinataire manquant"}), 400
         
-    analysis = db.session.get(Analysis, analysis_id)
-    if not analysis or analysis.user_id != user.id:
+    analysis = Analysis.query.filter_by(public_id=public_id, user_id=user.id).first()
+    if not analysis:
         return jsonify({"status": "error", "message": "Analyse introuvable"}), 404
         
     # 1. Configuration SMTP
@@ -1008,7 +1020,7 @@ def send_report_email():
             <p>Bonjour,</p>
             <p>Veuillez trouver ci-joint le rapport d'analyse technique généré par le système SOC LogAnalyzer.</p>
             <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>ID Analyse :</strong> #{analysis.id}</p>
+                <p style="margin: 5px 0;"><strong>ID Analyse :</strong> {analysis.public_id}</p>
                 <p style="margin: 5px 0;"><strong>Score Sécurité :</strong> {analysis.ai_score}/100</p>
                 <p style="margin: 5px 0;"><strong>Statut :</strong> {analysis.ai_status}</p>
                 <p style="margin: 5px 0;"><strong>Source :</strong> {analysis.server_ip if analysis.source_type == 'SSH' else 'Hôte Local'}</p>
@@ -1028,7 +1040,7 @@ def send_report_email():
         subject,
         html_body,
         pdf_bytes,
-        f"Rapport_Audit_{analysis_id}.pdf"
+        f"Rapport_Audit_{public_id}.pdf"
     )
 
     return jsonify({
