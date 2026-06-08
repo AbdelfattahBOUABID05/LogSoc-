@@ -920,12 +920,20 @@ def create_user_job():
         target_ip=data.get('target_ip'),
         log_path=data.get('log_path', '/var/log/syslog'),
         frequency=data.get('frequency', 'daily'),
-        custom_interval=data.get('custom_interval') if data.get('frequency') == 'custom' else None,
-        custom_unit=data.get('custom_unit') if data.get('frequency') == 'custom' else None,
+        custom_interval=data.get('custom_interval') if data.get('frequency') == 'custom' and not data.get('cron_expression') else None,
+        custom_unit=data.get('custom_unit') if data.get('frequency') == 'custom' and not data.get('cron_expression') else None,
+        cron_expression=data.get('cron_expression') if data.get('frequency') == 'custom' else None,
         ssh_username=data.get('ssh_user'),
         ssh_password_enc=encrypt_data(data.get('ssh_pass')),
         status='pending'
     )
+
+    # Validation basique du format Cron si présent
+    if new_job.frequency == 'custom' and new_job.cron_expression:
+        fields = new_job.cron_expression.split()
+        if len(fields) != 5:
+            return jsonify({"status": "error", "message": "L'expression Cron doit contenir exactement 5 champs (m h d m dw)"}), 400
+
     db.session.add(new_job)
     db.session.flush() # Pour avoir l'ID du job
 
@@ -1148,6 +1156,7 @@ def admin_get_jobs():
                 "log_path": j.log_path,
                 "frequency": j.frequency,
                 "status": j.status,
+                "validation_status": j.validation_status,
                 "created_at": j.created_at.isoformat() if j.created_at else None
             }
             for j in jobs
@@ -1168,6 +1177,7 @@ def admin_approve_job(job_id):
 
     if action == 'approve':
         job.status = 'active'
+        job.validation_status = 'approved'
         job.approved_at = datetime.now(timezone.utc)
         
         # Planifier le job dans APScheduler
@@ -1189,8 +1199,15 @@ def admin_approve_job(job_id):
         db.session.add(notif)
         
     elif action == 'refuse':
-        job.status = 'refused'
+        job.status = 'inactive'
+        job.validation_status = 'refused'
         job.refusal_reason = reason or 'Refusé par l\'administrateur'
+        
+        # Retirer du scheduler si actif
+        from extensions import scheduler as apscheduler
+        job_id_sched = f"analysis_job_{job.id}"
+        if apscheduler.get_job(job_id_sched):
+            apscheduler.remove_job(job_id_sched)
         
         # Notification à l'utilisateur avec motif
         notif = Notification(
@@ -1206,6 +1223,57 @@ def admin_approve_job(job_id):
 
     db.session.commit()
     return jsonify({"status": "success", "message": f"Job {action}d avec succès"})
+
+
+@api.route('/admin/jobs/<int:job_id>', methods=['DELETE'])
+@admin_required
+def admin_delete_job(job_id):
+    from models import AnalysisJob
+    job = db.session.get(AnalysisJob, job_id)
+    if not job:
+        return jsonify({"status": "error", "message": "Job introuvable"}), 404
+
+    # Retirer du scheduler si actif
+    from extensions import scheduler as apscheduler
+    job_id_sched = f"analysis_job_{job.id}"
+    if apscheduler.get_job(job_id_sched):
+        apscheduler.remove_job(job_id_sched)
+
+    db.session.delete(job)
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Job supprimé définitivement par l'administrateur"})
+
+
+@api.route('/admin/jobs/<int:job_id>/status', methods=['PUT'])
+@admin_required
+def admin_update_job_status(job_id):
+    from models import AnalysisJob
+    job = db.session.get(AnalysisJob, job_id)
+    if not job:
+        return jsonify({"status": "error", "message": "Job introuvable"}), 404
+
+    data = request.get_json()
+    new_status = data.get('status') # approved | refused | stopped | pending
+
+    if new_status not in ['approved', 'refused', 'stopped', 'pending']:
+        return jsonify({"status": "error", "message": "Statut de validation invalide"}), 400
+
+    job.validation_status = new_status
+    
+    # Si on arrête ou refuse, on s'assure que le job ne tourne plus
+    if new_status in ['refused', 'stopped']:
+        from extensions import scheduler as apscheduler
+        job_id_sched = f"analysis_job_{job.id}"
+        if apscheduler.get_job(job_id_sched):
+            apscheduler.remove_job(job_id_sched)
+    
+    # Si on approuve, on s'assure qu'il est planifié (si le user l'avait laissé actif)
+    if new_status == 'approved' and job.status == 'active':
+        from scheduler import schedule_job
+        schedule_job(job)
+
+    db.session.commit()
+    return jsonify({"status": "success", "message": "Statut de validation mis à jour"})
 
 
 # --- Admin: Remote Console (SSH Terminal) ---

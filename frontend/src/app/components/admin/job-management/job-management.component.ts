@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { LogService, Job } from '../../../services/log.service';
 import { NotificationService } from '../../../services/notification.service';
 import { SidebarComponent } from '../../sidebar/sidebar.component';
@@ -7,7 +8,7 @@ import { SidebarComponent } from '../../sidebar/sidebar.component';
 @Component({
   selector: 'app-job-management',
   standalone: true,
-  imports: [CommonModule, SidebarComponent],
+  imports: [CommonModule, SidebarComponent, FormsModule],
   templateUrl: './job-management.component.html',
   styleUrls: ['./job-management.component.css']
 })
@@ -61,5 +62,32 @@ export class JobManagementComponent implements OnInit {
         error: (err) => this.notify.error(err.error?.message || 'Erreur lors du refus')
       });
     }
+  }
+
+  async deleteJob(jobId: number): Promise<void> {
+    const confirmed = await this.notify.confirm(
+      'Supprimer définitivement ce job ?',
+      'Cette action supprimera également le job du planificateur APScheduler.',
+      'warning'
+    );
+    if (confirmed) {
+      this.logService.deleteAdminJob(jobId).subscribe({
+        next: (res) => {
+          this.notify.success(res.message);
+          this.fetchJobs();
+        },
+        error: (err) => this.notify.error('Erreur lors de la suppression')
+      });
+    }
+  }
+
+  updateStatus(jobId: number, newStatus: string): void {
+    this.logService.updateAdminJobStatus(jobId, newStatus).subscribe({
+      next: (res) => {
+        this.notify.success('Statut mis à jour');
+        this.fetchJobs();
+      },
+      error: (err) => this.notify.error('Erreur lors de la mise à jour du statut')
+    });
   }
 }

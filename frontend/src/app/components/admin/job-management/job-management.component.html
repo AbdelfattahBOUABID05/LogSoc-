@@ -24,9 +24,10 @@
 
       <div class="space-y-6 max-w-5xl mx-auto">
         <div *ngFor="let job of jobs" class="glass-card p-8 border-l-4 relative overflow-hidden group hover:scale-[1.01] animate-slide-up"
-             [class.border-amber-500]="job.status === 'pending'"
-             [class.border-emerald-500]="job.status === 'active'"
-             [class.border-red-500]="job.status === 'refused'">
+             [class.border-amber-500]="job.validation_status === 'pending'"
+             [class.border-emerald-500]="job.validation_status === 'approved'"
+             [class.border-red-500]="job.validation_status === 'refused'"
+             [class.border-slate-500]="job.validation_status === 'stopped'">
           <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-all duration-700"></div>
           
           <div class="flex justify-between items-start relative z-10">
@@ -36,6 +37,12 @@
                 <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
                   <i class="fas fa-user text-[10px] text-indigo-500"></i>
                   <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{{ job.username }}</span>
+                </div>
+                <!-- Badge d'état opérationnel (User side) -->
+                <div class="flex items-center gap-2 px-2 py-1 rounded-lg border"
+                     [ngClass]="job.status === 'active' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-500' : 'bg-slate-500/5 border-slate-500/20 text-slate-500'">
+                  <i class="fas text-[8px]" [ngClass]="job.status === 'active' ? 'fa-play' : 'fa-stop'"></i>
+                  <span class="text-[8px] font-black uppercase">{{ job.status === 'active' ? 'En cours' : 'Arrêté' }}</span>
                 </div>
               </div>
               
@@ -66,13 +73,26 @@
               </div>
             </div>
 
-            <div class="flex flex-col items-end gap-6">
-              <span [class]="job.status === 'pending' ? 'text-amber-500 border-amber-500/20 bg-amber-500/5' : job.status === 'active' ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 'text-red-500 border-red-500/20 bg-red-500/5'"
-                    class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all">
-                {{ job.status === 'pending' ? 'En attente' : job.status === 'active' ? 'Actif' : 'Refusé' }}
-              </span>
+            <div class="flex flex-col items-end gap-4">
+              <div class="flex items-center gap-3">
+                <!-- Dropdown de changement de statut -->
+                <select [ngModel]="job.validation_status" (change)="updateStatus(job.id, $any($event.target).value)"
+                        class="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer hover:bg-white transition-all">
+                  <option value="pending">En attente</option>
+                  <option value="approved">Approuvé</option>
+                  <option value="refused">Refusé</option>
+                  <option value="stopped">Arrêté</option>
+                </select>
 
-              <div *ngIf="job.status === 'pending'" class="flex gap-3">
+                <!-- Bouton Supprimer -->
+                <button (click)="deleteJob(job.id)" 
+                        class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center group/del shadow-lg shadow-red-500/5"
+                        title="Supprimer définitivement">
+                  <i class="fas fa-trash-alt text-xs group-hover/del:scale-110 transition-transform"></i>
+                </button>
+              </div>
+
+              <div *ngIf="job.validation_status === 'pending'" class="flex gap-3 pt-2">
                 <button (click)="approveJob(job)" 
                         class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl transition-all duration-300 shadow-lg shadow-emerald-500/20 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 group/btn">
                   <i class="fas fa-check group-hover/btn:scale-125 transition-transform"></i>

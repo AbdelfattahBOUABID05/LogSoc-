@@ -19,6 +19,10 @@ export class JobsComponent implements OnInit {
   showCreateModal = false;
   togglingJobId: number | null = null;
   
+  // Variables pour le support Cron personnalisé
+  isCustomCron = false;
+  cronExpression = '';
+  
   // Objet représentant une nouvelle tâche à planifier
   newJob = {
     name: '',
@@ -27,6 +31,7 @@ export class JobsComponent implements OnInit {
     frequency: 'daily',
     custom_interval: 30,
     custom_unit: 'minutes',
+    cron_expression: '',
     ssh_user: '',
     ssh_pass: ''
   };
@@ -40,6 +45,15 @@ export class JobsComponent implements OnInit {
   ngOnInit(): void {
     // Chargement initial des jobs à l'ouverture du composant
     this.fetchScheduledJobs();
+  }
+
+  /** Gère le basculement vers l'affichage du champ Cron personnalisé */
+  onPlanificationChange(event: any): void {
+    const value = event.target.value;
+    this.isCustomCron = (value === 'custom');
+    if (!this.isCustomCron) {
+      this.cronExpression = '';
+    }
   }
 
   /** Récupère la liste des jobs programmés pour l'utilisateur actuel */
@@ -64,7 +78,13 @@ export class JobsComponent implements OnInit {
       return;
     }
 
-    this.logService.createJob(this.newJob).subscribe({
+    // Ajout de l'expression Cron si nécessaire
+    const payload = { 
+      ...this.newJob,
+      cron_expression: this.isCustomCron ? this.cronExpression : null 
+    };
+
+    this.logService.createJob(payload).subscribe({
       next: (res: any) => {
         this.notify.success(res.message || 'Demande de job créée avec succès.');
         this.showCreateModal = false;
@@ -77,9 +97,12 @@ export class JobsComponent implements OnInit {
           frequency: 'daily', 
           custom_interval: 30,
           custom_unit: 'minutes',
+          cron_expression: '',
           ssh_user: '', 
           ssh_pass: '' 
         };
+        this.isCustomCron = false;
+        this.cronExpression = '';
       },
       error: (err: any) => {
         this.notify.error(err.error?.message || 'Erreur lors de la création du job.');

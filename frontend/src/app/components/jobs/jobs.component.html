@@ -193,13 +193,26 @@
               <div class="relative group/input">
                 <i class="fas fa-clock absolute left-5 top-5 text-slate-400 group-focus-within/input:text-indigo-500 transition-colors"></i>
                 <select [(ngModel)]="newJob.frequency" 
+                        (change)="onPlanificationChange($event)"
                         class="w-full pl-12 pr-10 py-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-bold cursor-pointer appearance-none">
                   <option value="hourly">Toutes les heures (Analyse continue)</option>
                   <option value="daily">Quotidien (Extraction à minuit)</option>
                   <option value="weekly">Hebdomadaire (Audit global)</option>
-                  <option value="custom">Intervalle Personnalisé (Expert)</option>
+                  <option value="custom">Intervalle Personnalisé (Expert!)</option>
                 </select>
                 <i class="fas fa-chevron-down absolute right-5 top-5 text-slate-400 pointer-events-none text-xs"></i>
+              </div>
+
+              <!-- Champ Expression Cron Conditionnel -->
+              <div *ngIf="isCustomCron" class="mt-4 animate-fade-in space-y-3">
+                <label class="block text-[9px] font-black text-indigo-500 uppercase tracking-widest ml-1">Expression Cron (Expert)</label>
+                <div class="relative group/input">
+                  <i class="fas fa-terminal absolute left-5 top-5 text-indigo-500"></i>
+                  <input type="text" [(ngModel)]="cronExpression" 
+                         class="w-full pl-12 pr-5 py-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-mono text-xs font-bold" 
+                         placeholder="ex: 0 2 * * * (Min Heure Jour Mois JourSemaine)">
+                </div>
+                <p class="text-[8px] text-slate-400 dark:text-white/20 uppercase font-bold tracking-tighter ml-1 italic">Format Unix Cron : 5 champs obligatoires.</p>
               </div>
             </div>
 

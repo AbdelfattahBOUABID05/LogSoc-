@@ -139,6 +139,7 @@ export interface Job {
   log_path: string;
   frequency: string;
   status: string;
+  validation_status: string;
   created_at: string;
 }
 
@@ -343,6 +344,16 @@ export class LogService {
   /** (Admin uniquement) Approuve ou refuse un job planifié */
   approveAdminJob(jobId: number, action: 'approve' | 'refuse', reason?: string): Observable<JobApprovalResponse> {
     return this.http.post<JobApprovalResponse>(`${this.apiUrl}/admin/jobs/${jobId}/approve`, { action, reason });
+  }
+
+  /** (Admin uniquement) Supprime définitivement un job */
+  deleteAdminJob(jobId: number): Observable<{ status: string; message: string }> {
+    return this.http.delete<{ status: string; message: string }>(`${this.apiUrl}/admin/jobs/${jobId}`);
+  }
+
+  /** (Admin uniquement) Met à jour manuellement le statut de validation */
+  updateAdminJobStatus(jobId: number, status: string): Observable<{ status: string; message: string }> {
+    return this.http.put<{ status: string; message: string }>(`${this.apiUrl}/admin/jobs/${jobId}/status`, { status });
   }
 
   // ========== GESTION DU CACHE ET CONNEXIONS RÉCENTES ==========

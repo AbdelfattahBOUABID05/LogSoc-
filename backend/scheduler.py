@@ -1,5 +1,6 @@
 from __future__ import annotations
 from flask_apscheduler import APScheduler
+from apscheduler.triggers.cron import CronTrigger
 from flask import Flask
 import logging
 import os
@@ -72,6 +73,26 @@ def schedule_job(job):
         trigger_args = {'trigger': 'interval', 'days': 1}
     elif job.frequency == 'weekly':
         trigger_args = {'trigger': 'interval', 'weeks': 1}
+    elif job.frequency == 'custom' and job.cron_expression:
+        # Support des expressions Cron standard (5 champs)
+        try:
+            fields = job.cron_expression.split()
+            if len(fields) != 5:
+                raise ValueError("Format Cron invalide (doit contenir 5 champs)")
+            
+            trigger_args = {
+                'trigger': CronTrigger(
+                    minute=fields[0],
+                    hour=fields[1],
+                    day=fields[2],
+                    month=fields[3],
+                    day_of_week=fields[4]
+                )
+            }
+        except Exception as e:
+            logger.error(f"Erreur parsing Cron '{job.cron_expression}': {e}")
+            # Fallback sur intervalle par défaut si erreur
+            trigger_args = {'trigger': 'interval', 'minutes': 30}
     elif job.frequency == 'custom':
         unit = job.custom_unit or 'minutes'
         interval = job.custom_interval or 30

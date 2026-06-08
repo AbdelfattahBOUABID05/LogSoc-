@@ -99,12 +99,16 @@ class AnalysisJob(db.Model):
     # Paramètres de connexion et cible
     target_ip = db.Column(db.String(64), nullable=False)
     log_path = db.Column(db.String(255), nullable=False, default="/var/log/syslog")
-    frequency = db.Column(db.String(20), nullable=False)  # hourly, daily, weekly, monthly, custom
+    
+    # Planification
+    frequency = db.Column(db.String(20), nullable=False, default="daily") # hourly | daily | weekly | custom
     custom_interval = db.Column(db.Integer, nullable=True)
-    custom_unit = db.Column(db.String(10), nullable=True)
+    custom_unit = db.Column(db.String(20), nullable=True) # minutes | hours | days
+    cron_expression = db.Column(db.String(50), nullable=True) # Nouveau : Expression Cron standard (ex: 0 2 * * *)
     
     # Statut du cycle de vie de la tâche
-    status = db.Column(db.String(20), nullable=False, default="pending")  # pending, active, refused, stopped
+    status = db.Column(db.String(20), nullable=False, default="pending")  # active, inactive (stopped by user)
+    validation_status = db.Column(db.String(20), nullable=False, default="pending") # pending, approved, refused, stopped (by admin)
     
     admin_notified = db.Column(db.Boolean, default=False)
     user_notified = db.Column(db.Boolean, default=False)
