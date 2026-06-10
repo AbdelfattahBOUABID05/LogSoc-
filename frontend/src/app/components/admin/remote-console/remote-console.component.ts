@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { MatIconModule } from '@angular/material/icon';
-import { SidebarComponent } from '../../sidebar/sidebar.component';
 import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-remote-console',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './remote-console.component.html',
   styleUrls: ['./remote-console.component.css']
 })
@@ -83,8 +82,6 @@ export class RemoteConsoleComponent implements OnInit {
       command: cmd
     };
 
-    console.log('JSON envoyé au Flask:', JSON.stringify(payload));
-
     this.http.post<any>(`${this.apiUrl}/admin/console`, payload).subscribe({
       next: (res) => {
         const newEntry = {
@@ -98,7 +95,7 @@ export class RemoteConsoleComponent implements OnInit {
       error: (err) => {
         const newEntry = {
           command: cmd,
-          output: `ERREUR : ${err.error?.message || 'Échec de la connexion SSH'}`
+          output: 'Erreur critique lors de l\'exécution de la commande.'
         };
         this.history.set([...this.history(), newEntry]);
         this.isExecuting.set(false);
@@ -109,9 +106,9 @@ export class RemoteConsoleComponent implements OnInit {
 
   private scrollToBottom(): void {
     setTimeout(() => {
-      try {
+      if (this.terminalBody) {
         this.terminalBody.nativeElement.scrollTop = this.terminalBody.nativeElement.scrollHeight;
-      } catch (err) {}
-    }, 100);
+      }
+    }, 50);
   }
 }

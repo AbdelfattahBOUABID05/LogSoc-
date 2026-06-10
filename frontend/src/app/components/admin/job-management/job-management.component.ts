@@ -3,12 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LogService, Job } from '../../../services/log.service';
 import { NotificationService } from '../../../services/notification.service';
-import { SidebarComponent } from '../../sidebar/sidebar.component';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-job-management',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './job-management.component.html',
   styleUrls: ['./job-management.component.css']
 })

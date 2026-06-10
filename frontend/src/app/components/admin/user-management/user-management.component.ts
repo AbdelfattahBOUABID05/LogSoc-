@@ -2,9 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { SidebarComponent } from '../../sidebar/sidebar.component';
 import { environment } from '../../../../environments/environment';
 import { CommonDialogService } from '../../../services/common-dialog.service';
+import { MatIconModule } from '@angular/material/icon';
 
 interface User {
   id?: number;
@@ -20,7 +20,7 @@ interface User {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './user-management.component.html',
   styleUrls: ['./user-management.component.css']
 })
@@ -105,15 +105,13 @@ export class UserManagementComponent implements OnInit {
   }
 
   resetPassword(user: User): void {
-    this.dialogService.prompt(
+    this.dialogService.confirm(
       'Réinitialisation',
-      `Entrez le nouveau mot de passe pour ${user.username} :`,
-      'Nouveau mot de passe',
-      'password'
-    ).subscribe((newPass: string | null) => {
-      if (newPass) {
-        this.http.put(`${this.apiUrl}/admin/users/${user.id}`, { password: newPass }).subscribe({
-          next: () => this.dialogService.alert('Succès', 'Mot de passe réinitialisé avec succès').subscribe(),
+      `Voulez-vous réinitialiser le mot de passe de ${user.username} ? Le nouveau mot de passe sera 'Admin123*'.`
+    ).subscribe((confirmed: boolean | null) => {
+      if (confirmed) {
+        this.http.post(`${this.apiUrl}/admin/users/${user.id}/reset-password`, {}).subscribe({
+          next: () => this.dialogService.alert('Succès', 'Mot de passe réinitialisé').subscribe(),
           error: (err: any) => this.dialogService.alert('Erreur', err.error?.message || 'Erreur lors de la réinitialisation').subscribe()
         });
       }

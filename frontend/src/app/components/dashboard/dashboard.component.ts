@@ -82,6 +82,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  viewReport(id: number): void {
+    this.router.navigate(['/report'], { queryParams: { id } });
+  }
+
   // Options ApexCharts pour le graphique unifié
   public mainChartOptions: any;
   public jobsChartOptions: any;

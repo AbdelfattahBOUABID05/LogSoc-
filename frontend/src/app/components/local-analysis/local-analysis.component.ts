@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { LogService } from '../../services/log.service';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 import { HttpEventType, HttpResponse } from '@angular/common/http';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-local-analysis',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, SidebarComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule],
   templateUrl: './local-analysis.component.html',
   styleUrls: ['./local-analysis.component.css']
 })
@@ -100,47 +100,35 @@ export class LocalAnalysisComponent {
         this.completeAnalysis(res);
       },
       error: (err: any) => {
-        this.error = err.error?.message || 'Erreur lors de l\'envoi du fichier.';
         this.loading = false;
+        this.error = 'Erreur serveur lors du téléversement.';
         this.stopProcessingAnimation();
       }
     });
   }
 
-  /** Simule une progression visuelle pendant que l'IA analyse les logs */
   private startProcessingAnimation(): void {
-    if (this.processingInterval) return;
-    
-    this.statusMessage = 'Analyse par IA en cours (Moteur LogAnalyzer Gemini)...';
-    
     this.processingInterval = setInterval(() => {
-      if (this.progressValue < 99) {
-        this.progressValue += 1;
+      if (this.progressValue < 90) {
+        this.progressValue += Math.floor(Math.random() * 5) + 1;
       }
-    }, 800);
+    }, 500);
   }
 
-  /** Finalise l'analyse et redirige vers le tableau de bord */
-  private completeAnalysis(res: any): void {
-    this.stopProcessingAnimation();
-    this.progressValue = 100;
-    
-    if (res.status === 'success' && res.analysis_id) {
-      this.statusMessage = 'Analyse terminée avec succès ! Redirection vers le centre de commande...';
-      setTimeout(() => {
-        this.router.navigate(['/dashboard']);
-      }, 1500);
-    } else {
-      this.error = res.message || 'Erreur lors de l\'analyse du fichier.';
-      this.loading = false;
-    }
-  }
-
-  /** Arrête le timer de l'animation de progression */
   private stopProcessingAnimation(): void {
     if (this.processingInterval) {
       clearInterval(this.processingInterval);
-      this.processingInterval = null;
     }
+  }
+
+  private completeAnalysis(res: any): void {
+    this.progressValue = 100;
+    this.stopProcessingAnimation();
+    setTimeout(() => {
+      this.loading = false;
+      if (res && res.analysis_id) {
+        this.router.navigate(['/report'], { queryParams: { id: res.analysis_id } });
+      }
+    }, 500);
   }
 }

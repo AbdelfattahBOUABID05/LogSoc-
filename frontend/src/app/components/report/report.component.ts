@@ -2,7 +2,6 @@ import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetector
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 import { LogService, Analysis } from '../../services/log.service';
 import { NotificationService } from '../../services/notification.service';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -18,7 +17,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, SidebarComponent, RouterModule, MatTabsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatTabsModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css']
 })
@@ -167,15 +166,10 @@ export class ReportComponent implements OnInit, AfterViewInit {
     this.warningLogs = Array.isArray(this.warningLogs) ? this.warningLogs : [];
     this.infoLogs = Array.isArray(this.infoLogs) ? this.infoLogs : [];
 
-    console.log(`Logs filtrés : ${this.errorLogs.length} Errors, ${this.warningLogs.length} Warnings, ${this.infoLogs.length} Infos`);
     this.applyLogFilter();
     this.cdr.detectChanges();
   }
 
-  /**
-   * Applique un filtrage réactif sur les listes de logs en fonction de la recherche utilisateur.
-   * Cette méthode est appelée à chaque modification de la barre de recherche.
-   */
   applyLogFilter(): void {
     const query = this.logSearchQuery.toLowerCase().trim();
     
@@ -196,13 +190,11 @@ export class ReportComponent implements OnInit, AfterViewInit {
     this.cdr.detectChanges();
   }
 
-  /** Réinitialise la barre de recherche des logs */
   clearLogSearch(): void {
     this.logSearchQuery = '';
     this.applyLogFilter();
   }
 
-  /** Récupère le message textuel d'un log quel que soit son format (objet ou chaîne) */
   getLogMessage(log: any): string {
     if (!log) return '';
     if (typeof log === 'string') return log;
@@ -351,5 +343,3 @@ export class ReportComponent implements OnInit, AfterViewInit {
     return `${baseClass} bg-emerald-500/20 text-emerald-400 border-emerald-500/20`;
   }
 }
-
-

@@ -5,13 +5,13 @@ import { RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { LogService, SettingsPayload } from '../../services/log.service';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 import { CommonDialogService } from '../../services/common-dialog.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, SidebarComponent],
+  imports: [CommonModule, FormsModule, RouterModule, MatIconModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css']
 })

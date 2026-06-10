@@ -1,104 +1,88 @@
-<div class="soc-container min-h-screen dark:bg-[#0f172a]">
-  <app-sidebar class="hidden lg:block w-72 h-screen fixed left-0 top-0 z-50"></app-sidebar>
-
-  <main class="lg:ml-72 p-6 lg:p-10 space-y-8">
-    <header class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-      <div class="header-content">
-        <div class="flex items-center gap-4 mb-2">
-          <div class="header-icon-box">
-            <mat-icon>library_books</mat-icon>
-          </div>
-          <h1 class="header-title dark:text-slate-100">BASE DE <span class="highlight">CONNAISSANCES</span></h1>
-        </div>
-        <p class="subtitle dark:text-slate-400">GESTION DES SOLUTIONS ET RÉSOLUTIONS SYSTÈME</p>
-      </div>
-    </header>
-
-    <!-- Formulaire d'ajout -->
-    <div class="glass-card p-8 dark:bg-slate-800/50 dark:border-slate-700">
-      <h3 class="card-title mb-6 dark:text-slate-100">ENREGISTRER UNE NOUVELLE SOLUTION</h3>
-      <form (submit)="saveSolution()" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="form-group">
-            <label class="input-label dark:text-slate-400">TITRE DU PROBLÈME</label>
-            <input type="text" [(ngModel)]="newSolution.problem_title" name="title" 
-                   placeholder="Ex: Erreur de connexion SSH" class="soc-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder-slate-400" required>
-          </div>
-          <div class="form-group">
-            <label class="input-label dark:text-slate-400">PATTERN DE LOG (MATCHING)</label>
-            <input type="text" [(ngModel)]="newSolution.log_pattern" name="pattern" 
-                   placeholder="Ex: Connection refused" class="soc-input dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder-slate-400" required>
-          </div>
+<div class="space-y-8 animate-fade-in">
+  <!-- Formulaire d'ajout -->
+  <div class="glass-card p-8">
+    <h3 class="card-title mb-6">ENREGISTRER UNE NOUVELLE SOLUTION</h3>
+    <form (submit)="saveSolution()" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="form-group">
+          <label class="input-label">TITRE DU PROBLÈME</label>
+          <input type="text" [(ngModel)]="newSolution.problem_title" name="title" 
+                 placeholder="Ex: Erreur de connexion SSH" class="soc-input" required>
         </div>
         <div class="form-group">
-          <label class="input-label dark:text-slate-400">SOLUTION TECHNIQUE</label>
-          <textarea [(ngModel)]="newSolution.solution_content" name="content" 
-                    placeholder="Décrivez la procédure de résolution..." class="soc-input min-h-[120px] dark:bg-slate-900 dark:text-white dark:border-slate-700 dark:placeholder-slate-400" required></textarea>
+          <label class="input-label">PATTERN DE LOG (MATCHING)</label>
+          <input type="text" [(ngModel)]="newSolution.log_pattern" name="pattern" 
+                 placeholder="Ex: Connection refused" class="soc-input" required>
         </div>
-        <div class="flex justify-end">
-          <button type="submit" [disabled]="isLoading()" class="action-btn">
-            <mat-icon>{{ isLoading() ? 'sync' : 'add_task' }}</mat-icon>
-            {{ isLoading() ? 'TRAITEMENT...' : 'ENREGISTRER LA SOLUTION' }}
-          </button>
-        </div>
-      </form>
+      </div>
+      <div class="form-group">
+        <label class="input-label">SOLUTION TECHNIQUE</label>
+        <textarea [(ngModel)]="newSolution.solution_content" name="content" 
+                  placeholder="Décrivez la procédure de résolution..." class="soc-input min-h-[120px]" required></textarea>
+      </div>
+      <div class="flex justify-end">
+        <button type="submit" [disabled]="isLoading()" class="action-btn">
+          <mat-icon>{{ isLoading() ? 'sync' : 'add_task' }}</mat-icon>
+          {{ isLoading() ? 'TRAITEMENT...' : 'ENREGISTRER LA SOLUTION' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Liste des solutions -->
+  <div class="space-y-6">
+    <h3 class="card-title px-4">BASE DE CONNAISSANCES COLLABORATIVE ({{ solutions().length }})</h3>
+    
+    <div *ngIf="solutions().length === 0 && !isLoading()" class="empty-dashboard-container glass-card">
+      <mat-icon class="text-slate-300 dark:text-white/20 text-5xl mb-4">forum</mat-icon>
+      <p class="text-slate-500 dark:text-slate-400">Aucune solution partagée. Soyez le premier à contribuer !</p>
     </div>
 
-    <!-- Liste des solutions -->
-    <div class="space-y-6">
-      <h3 class="card-title px-4 dark:text-slate-100">BASE DE CONNAISSANCES COLLABORATIVE ({{ solutions().length }})</h3>
-      
-      <div *ngIf="solutions().length === 0 && !isLoading()" class="empty-dashboard-container glass-card dark:bg-slate-800/50 dark:border-slate-700">
-        <mat-icon class="text-slate-300 dark:text-white/20 text-5xl mb-4">forum</mat-icon>
-        <p class="text-slate-500 dark:text-slate-400">Aucune solution partagée. Soyez le premier à contribuer !</p>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6">
-        <div *ngFor="let solution of solutions()" 
-             [id]="'sol-' + solution.id"
-             [class.highlighted-card]="highlightedId() === solution.id"
-             class="glass-card group overflow-hidden border-t-4 border-t-indigo-500 transition-all duration-500 dark:bg-slate-800/50 dark:border-slate-700">
-          <div class="p-6">
-            <div class="flex justify-between items-start mb-4">
-              <div>
-                <h4 class="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight group-hover:text-indigo-600 transition-colors">
-                  {{ solution.problem_title }}
-                </h4>
-                <div class="flex flex-wrap items-center gap-3 mt-2">
-                  <span class="text-[10px] font-black bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400 px-3 py-1 rounded-lg border border-indigo-500/20 dark:border-indigo-500/30 uppercase">
-                    PATTERN: {{ solution.log_pattern }}
-                  </span>
-                </div>
+    <div class="grid grid-cols-1 gap-6">
+      <div *ngFor="let solution of solutions()" 
+           [id]="'sol-' + solution.id"
+           [class.highlighted-card]="highlightedId() === solution.id"
+           class="glass-card group overflow-hidden border-t-4 border-t-indigo-500 transition-all duration-500">
+        <div class="p-6">
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h4 class="text-xl font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight group-hover:text-indigo-600 transition-colors">
+                {{ solution.problem_title }}
+              </h4>
+              <div class="flex flex-wrap items-center gap-3 mt-2">
+                <span class="text-[10px] font-black bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400 px-3 py-1 rounded-lg border border-indigo-500/20 dark:border-indigo-500/30 uppercase">
+                  PATTERN: {{ solution.log_pattern }}
+                </span>
               </div>
-              <button *ngIf="canDelete(solution)" (click)="deleteSolution(solution.id)" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all">
-                <mat-icon>delete_outline</mat-icon>
-              </button>
             </div>
+            <button *ngIf="canDelete(solution)" (click)="deleteSolution(solution.id)" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
 
-            <div class="bg-slate-50/80 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 mb-6">
-              <p class="text-sm text-slate-600 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
-                {{ solution.solution_content }}
-              </p>
+          <div class="bg-slate-50/80 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 mb-6">
+            <p class="text-sm text-slate-600 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
+              {{ solution.solution_content }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[10px] font-black uppercase">
+                {{ (solution.author_name || 'A')[0] }}
+              </div>
+              <div class="flex flex-col">
+                <span class="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase">Partagé par : {{ solution.author_name || 'Expert SOC' }}</span>
+                <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Le {{ solution.created_at | date:'dd MMMM yyyy à HH:mm' }}</span>
+              </div>
             </div>
-
-            <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[10px] font-black uppercase">
-                  {{ (solution.author_name || 'A')[0] }}
-                </div>
-                <div class="flex flex-col">
-                  <span class="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase">Partagé par : {{ solution.author_name || 'Expert SOC' }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Le {{ solution.created_at | date:'dd MMMM yyyy à HH:mm' }}</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <mat-icon class="text-slate-300 dark:text-white/20 text-sm">verified_user</mat-icon>
-                <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Validé par SOC-Analyzer</span>
-              </div>
+            <div class="flex items-center gap-2">
+              <mat-icon class="text-slate-300 dark:text-white/20 text-sm">verified_user</mat-icon>
+              <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase">Validé par SOC-Analyzer</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </main>
+  </div>
 </div>

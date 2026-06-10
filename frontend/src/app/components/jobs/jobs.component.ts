@@ -2,14 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 import { LogService } from '../../services/log.service';
 import { NotificationService } from '../../services/notification.service';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-jobs',
   standalone: true,
-  imports: [CommonModule, SidebarComponent, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   templateUrl: './jobs.component.html',
   styleUrls: ['./jobs.component.css']
 })
@@ -59,12 +59,12 @@ export class JobsComponent implements OnInit {
   /** Récupère la liste des jobs programmés pour l'utilisateur actuel */
   fetchScheduledJobs(): void {
     this.logService.getJobs().subscribe({
-      next: (data) => {
+      next: (data: any) => {
         if (data.status === 'success') {
           this.jobs = data.jobs;
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error fetching jobs:', err);
         this.notify.error('Impossible de charger la liste des jobs.');
       }
@@ -98,73 +98,58 @@ export class JobsComponent implements OnInit {
           custom_interval: 30,
           custom_unit: 'minutes',
           cron_expression: '',
-          ssh_user: '', 
-          ssh_pass: '' 
+          ssh_user: '',
+          ssh_pass: ''
         };
-        this.isCustomCron = false;
-        this.cronExpression = '';
       },
       error: (err: any) => {
-        this.notify.error(err.error?.message || 'Erreur lors de la création du job.');
+        this.notify.error('Erreur lors de la création du job.');
       }
     });
-  }
-
-  /** Supprime un job planifié après confirmation de l'utilisateur */
-  async deleteJob(id: number): Promise<void> {
-    const confirmed = await this.notify.confirm(
-      'Supprimer ce job ?',
-      'Cette action est irréversible et arrêtera toute analyse planifiée pour ce serveur.',
-      'warning'
-    );
-
-    if (confirmed) {
-      this.logService.deleteJob(id).subscribe({
-        next: (res) => {
-          this.notify.success(res.message || 'Job supprimé avec succès.');
-          this.fetchScheduledJobs();
-        },
-        error: (err) => this.notify.error('Erreur lors de la suppression.')
-      });
-    }
-  }
-
-  /** Retourne la classe CSS correspondant au statut du job (pour le badge de couleur) */
-  getStatusClass(status: string): string {
-    const base = "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ";
-    if (status === 'active') return base + "bg-emerald-500/20 text-emerald-400 border-emerald-500/20";
-    if (status === 'inactive' || status === 'pending') return base + "bg-amber-500/20 text-amber-400 border-amber-500/20";
-    if (status === 'refused') return base + "bg-rose-500/20 text-rose-400 border-rose-500/20";
-    return base + "bg-slate-500/20 text-slate-400 border-slate-500/20";
-  }
-
-  /** Formate la date de manière lisible pour l'interface */
-  formatDate(dateStr: string): string {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString();
   }
 
   /** Active ou désactive un job existant */
   toggleJob(id: number): void {
     this.togglingJobId = id;
     this.logService.toggleJob(id).subscribe({
-      next: (res) => {
-        this.notify.success(res.message);
+      next: (res: any) => {
+        this.notify.success(res.message || 'Statut du job mis à jour.');
         this.fetchScheduledJobs();
         this.togglingJobId = null;
       },
-      error: (err) => {
-        this.notify.error('Erreur lors de la modification du statut.');
+      error: (err: any) => {
+        this.notify.error('Erreur lors de la modification du job.');
         this.togglingJobId = null;
       }
     });
   }
 
-  /** Redirige vers l'historique filtré par ce job spécifique via son UUID public */
+  /** Supprime définitivement un job planifié */
+  deleteJob(id: number): void {
+    if (confirm('Voulez-vous vraiment supprimer ce job ?')) {
+      this.logService.deleteJob(id).subscribe({
+        next: (res: any) => {
+          this.notify.success(res.message || 'Job supprimé avec succès.');
+          this.fetchScheduledJobs();
+        },
+        error: (err: any) => {
+          this.notify.error('Erreur lors de la suppression.');
+        }
+      });
+    }
+  }
+
+  getStatusClass(status: string): string {
+    const base = 'px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ';
+    switch(status.toLowerCase()) {
+      case 'active': return base + 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+      case 'inactive': return base + 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+      case 'pending': return base + 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      default: return base + 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+    }
+  }
+
   viewJobHistory(jobId: string): void {
-    this.router.navigate(['/history'], { 
-      queryParams: { job_id: jobId } 
-    });
+    this.router.navigate(['/history'], { queryParams: { job_id: jobId } });
   }
 }
-

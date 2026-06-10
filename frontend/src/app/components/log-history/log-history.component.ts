@@ -1,14 +1,14 @@
 import { Component, OnInit, signal, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { LogService, Analysis } from '../../services/log.service';
-import { SidebarComponent } from '../sidebar/sidebar.component';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-log-history',
   standalone: true,
-  imports: [CommonModule, RouterModule, SidebarComponent, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, MatIconModule],
   templateUrl: './log-history.component.html',
   styleUrls: ['./log-history.component.css']
 })
@@ -95,7 +95,8 @@ export class LogHistoryComponent implements OnInit {
   constructor(
     private logService: LogService,
     private cdr: ChangeDetectorRef,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -105,105 +106,93 @@ export class LogHistoryComponent implements OnInit {
     });
   }
 
-  /**
-   * Appelle le backend pour récupérer toutes les analyses passées.
-   * Les données sont ensuite formatées pour assurer la cohérence de l'affichage.
-   */
-  loadAnalyses(jobId?: string | null): void {
+  /** Charge les analyses depuis le backend */
+  loadAnalyses(jobId: string | null = null): void {
     this.logService.getAnalyses(jobId).subscribe({
-      next: (data) => {
+      next: (data: any) => {
         if (data.status === 'success') {
-          const mapped = (data.analyses || []).map((analysis) => ({
-            ...analysis,
-            stats: analysis.stats || { errors: 0, warnings: 0, info: 0, total: 0 },
-            ai_status: analysis.ai_status || 'Sain',
-            ai_score: analysis.ai_score ?? 0,
-            ai_menaces: analysis.ai_menaces ?? 0
-          }));
-          this.allAnalyses.set(mapped);
-          this.cdr.detectChanges();
+          this.allAnalyses.set(data.analyses);
+          this.currentPage = 1;
         }
       },
-      error: (err) => console.error('Erreur chargement historique:', err)
+      error: (err: any) => {
+        console.error('Error loading history:', err);
+      }
     });
   }
 
-  /** Met à jour le signal de recherche textuelle */
-  onSearchChange(value: string): void {
-    this.searchQuery.set(value);
-    this.currentPage = 1;
-  }
-
-  /** Met à jour le signal de filtrage par date */
-  onDateChange(value: string): void {
-    this.filterDate.set(value);
-    this.currentPage = 1;
-  }
-
-  /** Réinitialise le filtre de date */
-  clearDateFilter(): void {
-    this.filterDate.set('');
-    this.currentPage = 1;
-  }
-
-  /** Met à jour le filtre par Type d'Analyse */
-  onTypeChange(value: string): void {
-    this.filterType.set(value);
-    this.currentPage = 1;
-  }
-
-  /** Met à jour le filtre par Statut IA */
-  onStatusChange(value: string): void {
-    this.filterStatus.set(value);
-    this.currentPage = 1;
-  }
-
-  /** Réinitialise tous les filtres de recherche */
+  /** Réinitialise tous les filtres actifs */
   resetFilters(): void {
     this.searchQuery.set('');
     this.filterDate.set('');
     this.filterType.set('all');
     this.filterStatus.set('all');
     this.currentPage = 1;
-  }getTargetDisplay(analysis: Analysis): string {
-    return analysis.job_name || analysis.server_ip || 'Audit Local';
   }
 
-  /** Formate la date ISO en format lisible français (JJ/MM/AAAA HH:mm) */
-  formatDate(dateStr: string | null): string {
+  onSearchChange(value: string): void {
+    this.searchQuery.set(value);
+    this.currentPage = 1;
+  }
+
+  onDateChange(value: string): void {
+    this.filterDate.set(value);
+    this.currentPage = 1;
+  }
+
+  onTypeChange(value: string): void {
+    this.filterType.set(value);
+    this.currentPage = 1;
+  }
+
+  onStatusChange(value: string): void {
+    this.filterStatus.set(value);
+    this.currentPage = 1;
+  }
+
+  clearDateFilter(): void {
+    this.filterDate.set('');
+    this.currentPage = 1;
+  }
+
+  formatDate(dateStr: string): string {
     if (!dateStr) return 'N/A';
     const date = new Date(dateStr);
     return date.toLocaleString('fr-FR', {
-      year: 'numeric',
-      month: '2-digit',
       day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
   }
 
-  /** Retourne la classe CSS pour le badge de statut IA */
+  getTargetDisplay(a: Analysis): string {
+    if (a.job_name) return a.job_name;
+    if (a.server_ip) return a.server_ip;
+    return 'Machine Locale';
+  }
+
   getStatusClass(status: string | null): string {
-    const base = 'px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all duration-300 ';
-    if (!status) return base + 'bg-slate-500/20 text-slate-400 border-slate-500/20';
+    const base = 'px-3 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest border ';
+    if (!status) return base + 'bg-slate-500/10 text-slate-500 border-slate-500/20';
     
     const s = status.toLowerCase();
-    if (s.includes('critique') || s.includes('error')) return base + 'bg-rose-500/20 text-rose-400 border-rose-500/20';
-    if (s.includes('attention') || s.includes('moyen') || s.includes('warning')) return base + 'bg-amber-500/20 text-amber-400 border-amber-500/20';
-    return base + 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20';
+    if (s.includes('menace')) return base + 'bg-red-500/10 text-red-500 border-red-500/20';
+    if (s.includes('attention')) return base + 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    return base + 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
   }
 
-  /** Redirige vers la page de rapport détaillé de l'analyse via son UUID public */
-  viewDetails(analysis: Analysis): void {
-    window.location.href = `/report?id=${analysis.id}`;
+  viewDetails(a: Analysis): void {
+    this.router.navigate(['/report'], { queryParams: { id: a.id } });
   }
 
-  /** Supprime une analyse après confirmation via son UUID public */
-  deleteAnalysis(analysis: Analysis): void {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette analyse ? Cette action est irréversible.')) {
-      this.logService.deleteAnalysis(analysis.id).subscribe({
-        next: () => this.loadAnalyses(),
-        error: (err) => console.error('Erreur suppression:', err)
+  deleteAnalysis(a: Analysis): void {
+    if (confirm('Voulez-vous supprimer cet audit de l\'historique ?')) {
+      this.logService.deleteAnalysis(a.id).subscribe({
+        next: (res: any) => {
+          this.loadAnalyses(this.currentJobPublicId);
+        }
       });
     }
   }

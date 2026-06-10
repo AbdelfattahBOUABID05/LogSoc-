@@ -3,12 +3,11 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { LogService } from '../../services/log.service';
-import { SidebarComponent } from '../sidebar/sidebar.component';
 
 @Component({
   selector: 'app-ssh-connection',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, SidebarComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './ssh.component.html',
   styleUrls: ['./ssh.component.css']
 })
@@ -53,7 +52,9 @@ export class SshComponent implements OnInit, AfterViewChecked {
   /** Fait défiler le conteneur du terminal vers le bas */
   private scrollToBottom(): void {
     try {
-      this.terminalContainer.nativeElement.scrollTop = this.terminalContainer.nativeElement.scrollHeight;
+      if (this.terminalContainer) {
+        this.terminalContainer.nativeElement.scrollTop = this.terminalContainer.nativeElement.scrollHeight;
+      }
     } catch (err) {}
   }
 
@@ -93,25 +94,22 @@ export class SshComponent implements OnInit, AfterViewChecked {
     this.addTerminalLog(`ATTENTE : Tentative de connexion SSH vers ${this.sshForm.value.host}...`);
 
     this.logService.analyzeSSH(this.sshForm.value).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         this.loading = false;
         if (response?.status === 'success') {
           this.success = true;
           this.lastAnalysisId = response.analysis_id || null;
-          this.addTerminalLog(`SUCCÈS : Analyse terminée avec succès. ID Rapport : ${this.lastAnalysisId}`);
-          
-          // Sauvegarde locale pour la prochaine utilisation
-          this.logService.saveConnection(this.sshForm.value);
-          this.loadRecent();
-          return;
+          this.addTerminalLog(`SUCCÈS : Connexion établie et analyse terminée.`);
+          this.addTerminalLog(`Rapport ID : ${this.lastAnalysisId}`);
+        } else {
+          this.error = response?.message || 'Erreur inconnue lors de l\'analyse SSH.';
+          this.addTerminalLog(`ÉCHEC : ${this.error}`);
         }
-        this.error = response?.message || "Erreur lors de l'analyse SSH";
-        this.addTerminalLog(`ERREUR : ${this.error}`);
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading = false;
-        this.error = err.error?.message || "Erreur de connexion au serveur SOC";
-        this.addTerminalLog(`ERREUR : ${this.error}`);
+        this.error = 'Erreur réseau ou timeout lors de la connexion SSH.';
+        this.addTerminalLog(`CRITIQUE : ${this.error}`);
       }
     });
   }
