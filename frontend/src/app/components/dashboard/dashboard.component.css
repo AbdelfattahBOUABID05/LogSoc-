@@ -17,10 +17,8 @@
   transition: background 0.5s ease, color 0.5s ease;
 }
 
-.glass-card:hover {
-  border-color: var(--neon-indigo);
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.1), 0 0 20px var(--shadow-glow);
-  transform: translateY(-4px);
+.glass-card {
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 /* Header Styles */

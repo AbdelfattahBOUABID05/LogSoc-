@@ -24,7 +24,7 @@
         <!-- Bouton Export PDF -->
         <button (click)="exportDashboardToPDF()" 
                 [disabled]="isExporting()"
-                class="glass-stat-card hover:bg-indigo-500/10 transition-all group" 
+                class="glass-stat-card transition-all group" 
                 matTooltip="Exporter le rapport d'analyse en PDF">
           <div class="stat-icon-box" [class.animate-spin]="isExporting()">
             <mat-icon class="text-indigo-500">{{ isExporting() ? 'sync' : 'description' }}</mat-icon>
@@ -344,7 +344,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
-              <tr *ngFor="let sol of latestKBSolutions()" class="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+              <tr *ngFor="let sol of latestKBSolutions()" class="transition-colors">
                 <td class="px-6 py-4">
                   <span class="text-xs font-bold text-slate-900 dark:text-white">{{ sol.problem_title }}</span>
                 </td>
@@ -395,7 +395,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
-              <tr *ngFor="let log of auditLogs()" class="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+              <tr *ngFor="let log of paginatedDashboardAuditLogs" class="transition-colors">
                 <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center">
@@ -430,6 +430,32 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div *ngIf="auditLogs().length > auditItemsPerPage" class="mt-6 flex items-center justify-between bg-slate-50/50 dark:bg-[#1e293b]/50 border border-slate-200/50 dark:border-slate-700/50 p-4 rounded-xl">
+          <div class="flex items-center gap-4">
+            <span class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+              Page {{ auditCurrentPage }} sur {{ totalAuditPages }}
+            </span>
+            <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+              Total : {{ auditLogs().length }} logs
+            </span>
+          </div>
+          
+          <div class="flex gap-2">
+            <button (click)="prevAuditPage()" 
+                    [disabled]="auditCurrentPage === 1"
+                    class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              Précédent
+            </button>
+            <button (click)="nextAuditPage()" 
+                    [disabled]="auditCurrentPage === totalAuditPages"
+                    class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+              Suivant
+            </button>
+          </div>
         </div>
       </div>
     </div>

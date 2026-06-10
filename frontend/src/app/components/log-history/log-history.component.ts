@@ -18,6 +18,11 @@ export class LogHistoryComponent implements OnInit {
   currentJobPublicId: string | null = null;
   searchQuery = signal<string>('');
   filterDate = signal<string>('');
+  filterType = signal<string>('all');
+  filterStatus = signal<string>('all');
+
+  currentPage: number = 1;
+  itemsPerPage: number = 5;
 
   /**
    * Propriété calculée (Computed Signal) qui filtre automatiquement la liste
@@ -26,6 +31,8 @@ export class LogHistoryComponent implements OnInit {
   filteredAnalyses = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
     const date = this.filterDate();
+    const type = this.filterType();
+    const status = this.filterStatus();
     const data = this.allAnalyses();
 
     return data.filter(a => {
@@ -34,7 +41,22 @@ export class LogHistoryComponent implements OnInit {
         return false;
       }
 
-      // Filtrage multi-critères (Serveur, Fichier, Statut, Type de source)
+      // Filtrage par Type d'Analyse
+      if (type !== 'all') {
+        if (type === 'ssh' && a.source_type !== 'ssh') return false;
+        if (type === 'locale' && a.source_type !== 'upload') return false;
+        if (type === 'jobs' && a.source_type !== 'scheduled') return false;
+      }
+
+      // Filtrage par Statut IA
+      if (status !== 'all') {
+        const s = (a.ai_status || '').toLowerCase();
+        if (status === 'menace' && !s.includes('menace')) return false;
+        if (status === 'attention' && !s.includes('attention')) return false;
+        if (status === 'normal' && !s.includes('normal')) return false;
+      }
+
+      // Filtrage multi-critères textuel
       if (!query) return true;
 
       const targetMatch = (a.job_name || a.server_ip || 'Machine Locale').toLowerCase().includes(query);
@@ -45,6 +67,30 @@ export class LogHistoryComponent implements OnInit {
       return targetMatch || fileMatch || statusMatch || typeMatch;
     });
   });
+
+  /**
+   * Getter pour la pagination
+   */
+  get paginatedLogs(): Analysis[] {
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return this.filteredAnalyses().slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.filteredAnalyses().length / this.itemsPerPage);
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.totalPages) {
+      this.currentPage++;
+    }
+  }
+
+  prevPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+    }
+  }
 
   constructor(
     private logService: LogService,
@@ -85,25 +131,41 @@ export class LogHistoryComponent implements OnInit {
   /** Met à jour le signal de recherche textuelle */
   onSearchChange(value: string): void {
     this.searchQuery.set(value);
+    this.currentPage = 1;
   }
 
   /** Met à jour le signal de filtrage par date */
   onDateChange(value: string): void {
     this.filterDate.set(value);
+    this.currentPage = 1;
   }
 
   /** Réinitialise le filtre de date */
   clearDateFilter(): void {
     this.filterDate.set('');
+    this.currentPage = 1;
+  }
+
+  /** Met à jour le filtre par Type d'Analyse */
+  onTypeChange(value: string): void {
+    this.filterType.set(value);
+    this.currentPage = 1;
+  }
+
+  /** Met à jour le filtre par Statut IA */
+  onStatusChange(value: string): void {
+    this.filterStatus.set(value);
+    this.currentPage = 1;
   }
 
   /** Réinitialise tous les filtres de recherche */
   resetFilters(): void {
     this.searchQuery.set('');
     this.filterDate.set('');
-  }
-
-  getTargetDisplay(analysis: Analysis): string {
+    this.filterType.set('all');
+    this.filterStatus.set('all');
+    this.currentPage = 1;
+  }getTargetDisplay(analysis: Analysis): string {
     return analysis.job_name || analysis.server_ip || 'Audit Local';
   }
 

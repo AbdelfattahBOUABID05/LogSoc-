@@ -59,3 +59,32 @@ aside {
 ::ng-deep .mat-icon {
   font-family: 'Material Icons' !important;
 }
+
+/* Bottom Icon Menu Styles */
+.bottom-icon-menu {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 15px 10px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bottom-menu-btn {
+  @apply flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 cursor-pointer border-none bg-transparent;
+  color: #94a3b8;
+  font-size: 20px;
+}
+
+.bottom-menu-btn:hover {
+  @apply scale-110;
+  color: #0066cc;
+  background: rgba(0, 102, 204, 0.1);
+}
+
+.bottom-menu-btn.logout-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}

@@ -54,17 +54,24 @@ def token_required(f):
         try:
             s = get_serializer()
             # On tente de charger l'ID utilisateur. Salt doit correspondre à celui du login.
-            user_id = s.loads(token, salt='auth-token', max_age=86400) # Expire après 24h
+            # Augmentation de max_age à 30 jours (2592000 secondes) pour éviter les expirations prématurées
+            user_id = s.loads(token, salt='auth-token', max_age=2592000) 
             
             user = db.session.get(User, user_id)
             if not user:
                 current_app.logger.warning(f"Accès refusé : Utilisateur {user_id} inexistant")
-                return jsonify({'status': 'error', 'message': 'Utilisateur non trouvé'}), 401
+                return jsonify({'status': 'error', 'error': 'Unauthorized', 'message': 'Utilisateur non trouvé'}), 401
             
             request.current_user = user
         except Exception as e:
             current_app.logger.error(f"Erreur d'authentification : {str(e)}")
-            return jsonify({'status': 'error', 'message': 'Token invalide ou expiré'}), 401
+            # Retourne impérativement du JSON pour éviter les erreurs de parsing côté frontend
+            return jsonify({
+                'status': 'error', 
+                'error': 'Unauthorized', 
+                'message': 'Token invalide ou expiré',
+                'details': str(e)
+            }), 401
         
         return f(*args, **kwargs)
     return decorated
@@ -250,7 +257,8 @@ def get_analyses():
         # On filtre par le public_id du Job associé
         query = query.join(AnalysisJob).filter(AnalysisJob.public_id == job_public_id)
 
-    analyses = query.order_by(Analysis.created_at.desc()).limit(100).all()
+    # On récupère toutes les analyses correspondantes sans limitation arbitraire
+    analyses = query.order_by(Analysis.created_at.desc()).all()
 
     return jsonify({
         "status": "success",

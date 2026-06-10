@@ -57,6 +57,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
   public auditLogs = signal<any[]>([]);
   private destroy$ = new Subject<void>();
 
+  // Pagination pour Audit Logs
+  public auditCurrentPage: number = 1;
+  public auditItemsPerPage: number = 5;
+
+  get totalAuditPages(): number {
+    return Math.ceil(this.auditLogs().length / this.auditItemsPerPage);
+  }
+
+  get paginatedDashboardAuditLogs(): any[] {
+    const startIndex = (this.auditCurrentPage - 1) * this.auditItemsPerPage;
+    return this.auditLogs().slice(startIndex, startIndex + this.auditItemsPerPage);
+  }
+
+  nextAuditPage(): void {
+    if (this.auditCurrentPage < this.totalAuditPages) {
+      this.auditCurrentPage++;
+    }
+  }
+
+  prevAuditPage(): void {
+    if (this.auditCurrentPage > 1) {
+      this.auditCurrentPage--;
+    }
+  }
+
   // Options ApexCharts pour le graphique unifié
   public mainChartOptions: any;
   public jobsChartOptions: any;

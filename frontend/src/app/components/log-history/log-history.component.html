@@ -37,6 +37,36 @@
           >
         </div>
 
+        <!-- Filter 1: Type d'Analyse -->
+        <div class="relative min-w-[180px]">
+          <select 
+            [ngModel]="filterType()" 
+            (ngModelChange)="onTypeChange($event)"
+            class="w-full pl-5 pr-10 py-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-bold appearance-none cursor-pointer text-xs uppercase tracking-widest"
+          >
+            <option value="all">Tous les Types</option>
+            <option value="ssh">Analyse SSH</option>
+            <option value="locale">Analyse Locale</option>
+            <option value="jobs">Jobs Planifiés</option>
+          </select>
+          <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+        </div>
+
+        <!-- Filter 2: Statut IA -->
+        <div class="relative min-w-[180px]">
+          <select 
+            [ngModel]="filterStatus()" 
+            (ngModelChange)="onStatusChange($event)"
+            class="w-full pl-5 pr-10 py-4 bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-indigo-900 dark:text-white font-bold appearance-none cursor-pointer text-xs uppercase tracking-widest"
+          >
+            <option value="all">Tous les Statuts</option>
+            <option value="menace">Menace Détectée</option>
+            <option value="attention">Attention</option>
+            <option value="normal">Normal</option>
+          </select>
+          <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+        </div>
+
         <!-- Date Filter -->
         <div class="relative group/date">
           <i class="fas fa-calendar-alt absolute left-5 top-5 text-indigo-500 group-hover/date:scale-110 transition-transform"></i>
@@ -77,7 +107,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-white/5">
-              <tr *ngFor="let analysis of filteredAnalyses()" class="hover:bg-indigo-500/[0.03] dark:hover:bg-[#00f2ff]/[0.03] transition-colors group">
+              <tr *ngFor="let analysis of paginatedLogs" class="hover:bg-indigo-500/[0.03] dark:hover:bg-[#00f2ff]/[0.03] transition-colors group">
                 <td class="px-6 py-5 whitespace-nowrap">
                   <div class="text-xs font-black text-slate-900 dark:text-white tracking-tight">{{ formatDate(analysis.created_at).split(' ')[0] }}</div>
                   <div class="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-tighter mt-1">{{ formatDate(analysis.created_at).split(' ')[1] }}</div>
@@ -162,6 +192,36 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div *ngIf="filteredAnalyses().length > itemsPerPage" class="px-8 py-6 flex items-center justify-between bg-slate-50/50 dark:bg-[#1e293b]/50 border-t border-slate-200 dark:border-white/5 transition-all">
+          <div class="flex items-center gap-6">
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation</span>
+              <span class="text-xs font-black text-indigo-500 uppercase italic">Page {{ currentPage }} sur {{ totalPages }}</span>
+            </div>
+            <div class="h-8 w-px bg-slate-200 dark:bg-white/10"></div>
+            <div class="flex flex-col">
+              <span class="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-1">Volume Total</span>
+              <span class="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{{ filteredAnalyses().length }} Résultat(s)</span>
+            </div>
+          </div>
+          
+          <div class="flex gap-4">
+            <button (click)="prevPage()" 
+                    [disabled]="currentPage === 1"
+                    class="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg">
+              <i class="fas fa-chevron-left group-hover:-translate-x-1 transition-transform"></i>
+              Précédent
+            </button>
+            <button (click)="nextPage()" 
+                    [disabled]="currentPage === totalPages"
+                    class="group flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed transition-all shadow-lg">
+              Suivant
+              <i class="fas fa-chevron-right group-hover:translate-x-1 transition-transform"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -132,11 +132,6 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 24px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  .glass-card:hover {
-    border-color: var(--neon-indigo);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 20px var(--shadow-glow);
-  }
 }
 
 .glass-highlight:hover {
@@ -180,10 +175,6 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: var(--shadow-soft);
     will-change: transform;
     @apply rounded-2xl transition-all duration-500;
-  }
-
-  .stat-card:hover {
-    @apply shadow-soft transform -translate-y-0.5;
   }
 
   .btn-primary {

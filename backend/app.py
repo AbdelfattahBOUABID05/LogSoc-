@@ -133,7 +133,7 @@ def create_default_admin():
             role='Admin',
             is_first_login=False
         )
-        admin_user.set_password(os.getenv('DEFAULT_ADMIN_PASSWORD', 'Admin@12345'))
+        admin_user.set_password(os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin'))
         db.session.add(admin_user)
         
         try:
@@ -185,6 +185,24 @@ def create_app():
 
     # Enregistrement des Blueprints
     app.register_blueprint(api_blueprint)
+
+    # Gestion globale des erreurs pour garantir des réponses JSON
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return jsonify({"status": "error", "error": "Not Found", "message": "La ressource demandée n'existe pas"}), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return jsonify({"status": "error", "error": "Internal Server Error", "message": "Une erreur interne est survenue"}), 500
+
+    @app.errorhandler(401)
+    def unauthorized_error(error):
+        return jsonify({"status": "error", "error": "Unauthorized", "message": "Authentification requise"}), 401
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        return jsonify({"status": "error", "error": "Forbidden", "message": "Accès refusé"}), 403
 
     # Initialisation de la DB et du Scheduler
     setup_database(app)
