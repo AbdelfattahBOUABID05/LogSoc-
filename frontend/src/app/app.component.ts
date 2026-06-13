@@ -1,17 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { RouterModule, Router, NavigationEnd, NavigationStart } from '@angular/router';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
+import { LoadingComponent } from './components/loading/loading.component';
 import { ThemeService } from './services/theme.service';
 import { LogService, Notification } from './services/log.service';
 import { AuthService } from './services/auth.service';
+import { LoadingService } from './services/loading.service';
 import { MatIconModule } from '@angular/material/icon';
 import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterModule, SidebarComponent, MatIconModule],
+  imports: [CommonModule, RouterModule, SidebarComponent, MatIconModule, LoadingComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
@@ -28,18 +30,31 @@ export class AppComponent implements OnInit {
     public themeService: ThemeService,
     private logService: LogService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private loadingService: LoadingService
   ) {}
 
   ngOnInit(): void {
+    // Show loading on initial app load
+    this.loadingService.showAndHide(1500);
+
     this.updateHeaderInfo(this.router.url);
     this.loadNotifications();
+
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe(() => {
+      // Show loading on route change start
+      this.loadingService.show();
+    });
 
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
       this.updateHeaderInfo(event.url);
       this.showNotifications = false;
+      // Hide loading on route change end (after a short delay for smoothness)
+      setTimeout(() => this.loadingService.hide(), 800);
     });
 
     setInterval(() => {
